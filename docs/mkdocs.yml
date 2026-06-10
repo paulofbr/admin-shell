@@ -1,0 +1,111 @@
+# =============================================================================
+# Admin Shell — MkDocs Configuration
+# =============================================================================
+# Build: mkdocs build
+# Dev server: mkdocs serve
+# =============================================================================
+
+site_name: Admin Shell
+site_description: Documentation for the extensible admin shell framework
+site_author: Admin Shell Team
+site_url: https://admin-shell.nousresearch.com
+repo_name: admin-shell
+repo_url: https://github.com/nousresearch/admin-shell
+edit_uri: edit/main/docs/docs/
+
+theme:
+  name: material
+  language: en
+  features:
+    - navigation.instant
+    - navigation.instant.prefetch
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - navigation.footer
+    - search.suggest
+    - search.highlight
+    - search.share
+    - toc.follow
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  icon:
+    logo: material/shield-account
+    repo: fontawesome/brands/github
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/nousresearch/admin-shell
+  consent:
+    title: Cookie consent
+    description: >-
+      We use cookies to recognize your repeated visits and preferences,
+      as well as to measure the effectiveness of our documentation.
+
+extra_css:
+  - assets/stylesheets/extra.css
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - pymdownx.critic
+  - pymdownx.caret
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.tilde
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.emoji
+  - tables
+  - toc:
+      permalink: true
+
+plugins:
+  - search
+  - glightbox
+  - minify:
+      minify_html: true
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Architecture: architecture.md
+  - Plugin Development:
+    - Overview: plugin-development.md
+  - API Reference: api-reference.md
+  - Deployment: deployment.md
+  - Troubleshooting: troubleshooting.md
+
+copyright: Copyright &copy; 2024-2025 Admin Shell Team

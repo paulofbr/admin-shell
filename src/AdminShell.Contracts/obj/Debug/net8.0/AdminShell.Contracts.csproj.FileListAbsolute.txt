@@ -1,0 +1,12 @@
+/home/paulo/Documentos/Portal/admin-shell/src/AdminShell.Contracts/obj/Debug/net8.0/AdminShell.Contracts.GeneratedMSBuildEditorConfig.editorconfig
+/home/paulo/Documentos/Portal/admin-shell/src/AdminShell.Contracts/obj/Debug/net8.0/AdminShell.Contracts.AssemblyInfoInputs.cache
+/home/paulo/Documentos/Portal/admin-shell/src/AdminShell.Contracts/obj/Debug/net8.0/AdminShell.Contracts.AssemblyInfo.cs
+/home/paulo/Documentos/Portal/admin-shell/src/AdminShell.Contracts/obj/Debug/net8.0/AdminShell.Contracts.csproj.CoreCompileInputs.cache
+/home/paulo/Documentos/Portal/admin-shell/src/AdminShell.Contracts/obj/Debug/net8.0/AdminShell.Contracts.csproj.AssemblyReference.cache
+/home/paulo/Documentos/Portal/admin-shell/src/AdminShell.Contracts/bin/Debug/net8.0/AdminShell.Contracts.deps.json
+/home/paulo/Documentos/Portal/admin-shell/src/AdminShell.Contracts/bin/Debug/net8.0/AdminShell.Contracts.dll
+/home/paulo/Documentos/Portal/admin-shell/src/AdminShell.Contracts/bin/Debug/net8.0/AdminShell.Contracts.pdb
+/home/paulo/Documentos/Portal/admin-shell/src/AdminShell.Contracts/obj/Debug/net8.0/AdminShell.Contracts.dll
+/home/paulo/Documentos/Portal/admin-shell/src/AdminShell.Contracts/obj/Debug/net8.0/refint/AdminShell.Contracts.dll
+/home/paulo/Documentos/Portal/admin-shell/src/AdminShell.Contracts/obj/Debug/net8.0/AdminShell.Contracts.pdb
+/home/paulo/Documentos/Portal/admin-shell/src/AdminShell.Contracts/obj/Debug/net8.0/ref/AdminShell.Contracts.dll

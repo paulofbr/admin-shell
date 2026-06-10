@@ -1,0 +1,15 @@
+/home/paulo/Documentos/Portal/admin-shell/src/AdminShell.Core/obj/Debug/net8.0/AdminShell.Core.csproj.AssemblyReference.cache
+/home/paulo/Documentos/Portal/admin-shell/src/AdminShell.Core/obj/Debug/net8.0/AdminShell.Core.GeneratedMSBuildEditorConfig.editorconfig
+/home/paulo/Documentos/Portal/admin-shell/src/AdminShell.Core/obj/Debug/net8.0/AdminShell.Core.AssemblyInfoInputs.cache
+/home/paulo/Documentos/Portal/admin-shell/src/AdminShell.Core/obj/Debug/net8.0/AdminShell.Core.AssemblyInfo.cs
+/home/paulo/Documentos/Portal/admin-shell/src/AdminShell.Core/obj/Debug/net8.0/AdminShell.Core.csproj.CoreCompileInputs.cache
+/home/paulo/Documentos/Portal/admin-shell/src/AdminShell.Core/bin/Debug/net8.0/AdminShell.Core.deps.json
+/home/paulo/Documentos/Portal/admin-shell/src/AdminShell.Core/bin/Debug/net8.0/AdminShell.Core.dll
+/home/paulo/Documentos/Portal/admin-shell/src/AdminShell.Core/bin/Debug/net8.0/AdminShell.Core.pdb
+/home/paulo/Documentos/Portal/admin-shell/src/AdminShell.Core/bin/Debug/net8.0/AdminShell.Contracts.dll
+/home/paulo/Documentos/Portal/admin-shell/src/AdminShell.Core/bin/Debug/net8.0/AdminShell.Contracts.pdb
+/home/paulo/Documentos/Portal/admin-shell/src/AdminShell.Core/obj/Debug/net8.0/AdminShe.6EDB1B8E.Up2Date
+/home/paulo/Documentos/Portal/admin-shell/src/AdminShell.Core/obj/Debug/net8.0/AdminShell.Core.dll
+/home/paulo/Documentos/Portal/admin-shell/src/AdminShell.Core/obj/Debug/net8.0/refint/AdminShell.Core.dll
+/home/paulo/Documentos/Portal/admin-shell/src/AdminShell.Core/obj/Debug/net8.0/AdminShell.Core.pdb
+/home/paulo/Documentos/Portal/admin-shell/src/AdminShell.Core/obj/Debug/net8.0/ref/AdminShell.Core.dll

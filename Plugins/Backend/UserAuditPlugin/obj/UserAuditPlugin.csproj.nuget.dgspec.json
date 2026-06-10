@@ -1,0 +1,271 @@
+{
+  "format": 1,
+  "restore": {
+    "/home/paulo/Documentos/Portal/admin-shell/Plugins/Backend/UserAuditPlugin/UserAuditPlugin.csproj": {}
+  },
+  "projects": {
+    "/home/paulo/Documentos/Portal/admin-shell/Plugins/Backend/ReportingPlugin/ReportingPlugin.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "/home/paulo/Documentos/Portal/admin-shell/Plugins/Backend/ReportingPlugin/ReportingPlugin.csproj",
+        "projectName": "ReportingPlugin",
+        "projectPath": "/home/paulo/Documentos/Portal/admin-shell/Plugins/Backend/ReportingPlugin/ReportingPlugin.csproj",
+        "packagesPath": "/home/paulo/.nuget/packages/",
+        "outputPath": "/home/paulo/Documentos/Portal/admin-shell/Plugins/Backend/ReportingPlugin/obj/",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "/home/paulo/.nuget/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net9.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net9.0": {
+            "targetAlias": "net9.0",
+            "projectReferences": {
+              "/home/paulo/Documentos/Portal/admin-shell/src/AdminShell.Contracts/AdminShell.Contracts.csproj": {
+                "projectPath": "/home/paulo/Documentos/Portal/admin-shell/src/AdminShell.Contracts/AdminShell.Contracts.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.300"
+      },
+      "frameworks": {
+        "net9.0": {
+          "targetAlias": "net9.0",
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.AspNetCore.App": {
+              "privateAssets": "none"
+            },
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/9.0.308/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "/home/paulo/Documentos/Portal/admin-shell/Plugins/Backend/UserAuditPlugin/UserAuditPlugin.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "/home/paulo/Documentos/Portal/admin-shell/Plugins/Backend/UserAuditPlugin/UserAuditPlugin.csproj",
+        "projectName": "UserAuditPlugin",
+        "projectPath": "/home/paulo/Documentos/Portal/admin-shell/Plugins/Backend/UserAuditPlugin/UserAuditPlugin.csproj",
+        "packagesPath": "/home/paulo/.nuget/packages/",
+        "outputPath": "/home/paulo/Documentos/Portal/admin-shell/Plugins/Backend/UserAuditPlugin/obj/",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "/home/paulo/.nuget/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net9.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net9.0": {
+            "targetAlias": "net9.0",
+            "projectReferences": {
+              "/home/paulo/Documentos/Portal/admin-shell/Plugins/Backend/ReportingPlugin/ReportingPlugin.csproj": {
+                "projectPath": "/home/paulo/Documentos/Portal/admin-shell/Plugins/Backend/ReportingPlugin/ReportingPlugin.csproj"
+              },
+              "/home/paulo/Documentos/Portal/admin-shell/src/AdminShell.Contracts/AdminShell.Contracts.csproj": {
+                "projectPath": "/home/paulo/Documentos/Portal/admin-shell/src/AdminShell.Contracts/AdminShell.Contracts.csproj"
+              },
+              "/home/paulo/Documentos/Portal/admin-shell/src/AdminShell.Core/AdminShell.Core.csproj": {
+                "projectPath": "/home/paulo/Documentos/Portal/admin-shell/src/AdminShell.Core/AdminShell.Core.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.300"
+      },
+      "frameworks": {
+        "net9.0": {
+          "targetAlias": "net9.0",
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/9.0.308/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "/home/paulo/Documentos/Portal/admin-shell/src/AdminShell.Contracts/AdminShell.Contracts.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "/home/paulo/Documentos/Portal/admin-shell/src/AdminShell.Contracts/AdminShell.Contracts.csproj",
+        "projectName": "AdminShell.Contracts",
+        "projectPath": "/home/paulo/Documentos/Portal/admin-shell/src/AdminShell.Contracts/AdminShell.Contracts.csproj",
+        "packagesPath": "/home/paulo/.nuget/packages/",
+        "outputPath": "/home/paulo/Documentos/Portal/admin-shell/src/AdminShell.Contracts/obj/",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "/home/paulo/.nuget/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net9.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net9.0": {
+            "targetAlias": "net9.0",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.300"
+      },
+      "frameworks": {
+        "net9.0": {
+          "targetAlias": "net9.0",
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.AspNetCore.App": {
+              "privateAssets": "none"
+            },
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/9.0.308/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "/home/paulo/Documentos/Portal/admin-shell/src/AdminShell.Core/AdminShell.Core.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "/home/paulo/Documentos/Portal/admin-shell/src/AdminShell.Core/AdminShell.Core.csproj",
+        "projectName": "AdminShell.Core",
+        "projectPath": "/home/paulo/Documentos/Portal/admin-shell/src/AdminShell.Core/AdminShell.Core.csproj",
+        "packagesPath": "/home/paulo/.nuget/packages/",
+        "outputPath": "/home/paulo/Documentos/Portal/admin-shell/src/AdminShell.Core/obj/",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "/home/paulo/.nuget/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net9.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net9.0": {
+            "targetAlias": "net9.0",
+            "projectReferences": {
+              "/home/paulo/Documentos/Portal/admin-shell/src/AdminShell.Contracts/AdminShell.Contracts.csproj": {
+                "projectPath": "/home/paulo/Documentos/Portal/admin-shell/src/AdminShell.Contracts/AdminShell.Contracts.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.300"
+      },
+      "frameworks": {
+        "net9.0": {
+          "targetAlias": "net9.0",
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.AspNetCore.App": {
+              "privateAssets": "none"
+            },
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/9.0.308/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    }
+  }
+}

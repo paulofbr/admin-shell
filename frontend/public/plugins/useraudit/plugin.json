@@ -1,0 +1,14 @@
+{
+  "id": "useraudit",
+  "name": "User Audit Plugin",
+  "version": "1.0.0",
+  "description": "Tracks user activity and audit logs",
+  "main": "index.js",
+  "styles": [],
+  "dependencies": {},
+  "permissions": ["audit:read"],
+  "uiContributions": {
+    "menuItems": [],
+    "widgets": []
+  }
+}

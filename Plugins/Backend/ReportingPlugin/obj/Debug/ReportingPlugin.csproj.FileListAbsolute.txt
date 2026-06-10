@@ -1,0 +1,14 @@
+/home/paulo/Documentos/Portal/admin-shell/Plugins/Backend/ReportingPlugin/obj/Debug/ReportingPlugin.csproj.AssemblyReference.cache
+/home/paulo/Documentos/Portal/admin-shell/Plugins/Backend/ReportingPlugin/obj/Debug/ReportingPlugin.GeneratedMSBuildEditorConfig.editorconfig
+/home/paulo/Documentos/Portal/admin-shell/Plugins/Backend/ReportingPlugin/obj/Debug/ReportingPlugin.AssemblyInfoInputs.cache
+/home/paulo/Documentos/Portal/admin-shell/Plugins/Backend/ReportingPlugin/obj/Debug/ReportingPlugin.AssemblyInfo.cs
+/home/paulo/Documentos/Portal/admin-shell/Plugins/Backend/ReportingPlugin/obj/Debug/ReportingPlugin.csproj.CoreCompileInputs.cache
+/home/paulo/Documentos/Portal/admin-shell/Plugins/Backend/ReportingPlugin/obj/Debug/Reportin.C3B7A0AA.Up2Date
+/home/paulo/Documentos/Portal/admin-shell/Plugins/Backend/plugin.json
+/home/paulo/Documentos/Portal/admin-shell/Plugins/Backend/ReportingPlugin/obj/Debug/ReportingPlugin.dll
+/home/paulo/Documentos/Portal/admin-shell/Plugins/Backend/ReportingPlugin/obj/Debug/refint/ReportingPlugin.dll
+/home/paulo/Documentos/Portal/admin-shell/Plugins/Backend/ReportingPlugin/obj/Debug/ReportingPlugin.pdb
+/home/paulo/Documentos/Portal/admin-shell/Plugins/Backend/ReportingPlugin.deps.json
+/home/paulo/Documentos/Portal/admin-shell/Plugins/Backend/ReportingPlugin.dll
+/home/paulo/Documentos/Portal/admin-shell/Plugins/Backend/ReportingPlugin/obj/Debug/ref/ReportingPlugin.dll
+/home/paulo/Documentos/Portal/admin-shell/Plugins/Backend/ReportingPlugin.pdb

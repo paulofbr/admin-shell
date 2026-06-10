@@ -1,0 +1,180 @@
+# =============================================================================
+# Admin Shell — CI/CD Pipeline
+# =============================================================================
+# This workflow runs on every push to main and on pull requests.
+# On version tags (v*) it additionally publishes NuGet and npm packages.
+# =============================================================================
+
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_VERSION: "9.0.x"
+  NODE_VERSION: "20.x"
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  # ── Job 1: Backend — Build & Test ──────────────────────────────────────────
+  backend:
+    name: Backend (Build & Test)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET ${{ env.DOTNET_VERSION }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore NuGet packages
+        run: dotnet restore
+
+      - name: Build backend (Release)
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Run backend tests
+        run: dotnet test --configuration Release --no-build --verbosity normal
+
+  # ── Job 2: Frontend — Build ────────────────────────────────────────────────
+  frontend:
+    name: Frontend (Build)
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint frontend
+        run: npm run lint
+
+      - name: Build frontend
+        run: npm run build
+
+  # ── Job 3: Plugin Build — Compile sample plugins ──────────────────────────
+  plugins:
+    name: Plugin Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET ${{ env.DOTNET_VERSION }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore solution
+        run: dotnet restore
+
+      - name: Build all backend plugins
+        run: |
+          for plugin_dir in Plugins/Backend/*/; do
+            if [ -f "${plugin_dir}*.csproj" ]; then
+              csproj=$(ls "${plugin_dir}"*.csproj 2>/dev/null | head -1)
+              if [ -n "$csproj" ]; then
+                echo "Building plugin: $csproj"
+                dotnet build "$csproj" --configuration Release
+              fi
+            fi
+          done
+
+  # ── Job 4: Publish (tagged releases only) ──────────────────────────────────
+  publish:
+    name: Publish (NuGet & npm)
+    needs: [backend, frontend, plugins]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET ${{ env.DOTNET_VERSION }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          registry-url: "https://registry.npmjs.org"
+
+      # ── Extract version from Git tag ────────────────────────────────────
+      - name: Extract version
+        id: version
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      # ── Pack NuGet packages ─────────────────────────────────────────────
+      - name: Pack NuGet packages
+        run: |
+          dotnet pack src/AdminShell.Contracts/AdminShell.Contracts.csproj \
+            --configuration Release \
+            -p:Version=${{ steps.version.outputs.VERSION }} \
+            --output "${{ runner.temp }}/nuget"
+
+          dotnet pack src/AdminShell.Core/AdminShell.Core.csproj \
+            --configuration Release \
+            -p:Version=${{ steps.version.outputs.VERSION }} \
+            --output "${{ runner.temp }}/nuget"
+
+          dotnet pack src/AdminShell.Infrastructure/AdminShell.Infrastructure.csproj \
+            --configuration Release \
+            -p:Version=${{ steps.version.outputs.VERSION }} \
+            --output "${{ runner.temp }}/nuget"
+
+      - name: Push NuGet packages to GitHub Packages
+        run: |
+          dotnet nuget push "${{ runner.temp }}/nuget/*.nupkg" \
+            --source "https://api.nuget.org/v3/index.json" \
+            --api-key ${{ secrets.NUGET_API_KEY }} \
+            --skip-duplicate
+
+      # ── Publish frontend to npm ─────────────────────────────────────────
+      - name: Build frontend for production
+        run: npm ci && npm run build
+        working-directory: frontend
+
+      - name: Publish frontend to npm
+        working-directory: frontend
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # ── Create GitHub Release ───────────────────────────────────────────
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "v${{ steps.version.outputs.VERSION }}"
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
+          draft: false
+          prerelease: false

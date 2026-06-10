@@ -1,0 +1,14 @@
+/home/paulo/Documentos/Portal/admin-shell/Plugins/Backend/UserDepartmentPlugin/obj/Debug/UserDepartmentPlugin.csproj.AssemblyReference.cache
+/home/paulo/Documentos/Portal/admin-shell/Plugins/Backend/UserDepartmentPlugin/obj/Debug/UserDepartmentPlugin.GeneratedMSBuildEditorConfig.editorconfig
+/home/paulo/Documentos/Portal/admin-shell/Plugins/Backend/UserDepartmentPlugin/obj/Debug/UserDepartmentPlugin.AssemblyInfoInputs.cache
+/home/paulo/Documentos/Portal/admin-shell/Plugins/Backend/UserDepartmentPlugin/obj/Debug/UserDepartmentPlugin.AssemblyInfo.cs
+/home/paulo/Documentos/Portal/admin-shell/Plugins/Backend/UserDepartmentPlugin/obj/Debug/UserDepartmentPlugin.csproj.CoreCompileInputs.cache
+/home/paulo/Documentos/Portal/admin-shell/Plugins/Backend/UserDepartmentPlugin/obj/Debug/UserDepa.1820999C.Up2Date
+/home/paulo/Documentos/Portal/admin-shell/Plugins/Backend/plugin.json
+/home/paulo/Documentos/Portal/admin-shell/Plugins/Backend/UserDepartmentPlugin/obj/Debug/UserDepartmentPlugin.dll
+/home/paulo/Documentos/Portal/admin-shell/Plugins/Backend/UserDepartmentPlugin/obj/Debug/refint/UserDepartmentPlugin.dll
+/home/paulo/Documentos/Portal/admin-shell/Plugins/Backend/UserDepartmentPlugin/obj/Debug/UserDepartmentPlugin.pdb
+/home/paulo/Documentos/Portal/admin-shell/Plugins/Backend/UserDepartmentPlugin.deps.json
+/home/paulo/Documentos/Portal/admin-shell/Plugins/Backend/UserDepartmentPlugin.dll
+/home/paulo/Documentos/Portal/admin-shell/Plugins/Backend/UserDepartmentPlugin/obj/Debug/ref/UserDepartmentPlugin.dll
+/home/paulo/Documentos/Portal/admin-shell/Plugins/Backend/UserDepartmentPlugin.pdb

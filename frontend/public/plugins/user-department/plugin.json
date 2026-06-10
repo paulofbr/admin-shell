@@ -1,0 +1,14 @@
+{
+  "id": "user-department",
+  "name": "User Department Plugin",
+  "version": "1.0.0",
+  "description": "Adds department column and filtering to the users grid",
+  "main": "index.js",
+  "styles": [],
+  "dependencies": {},
+  "permissions": ["users:read"],
+  "uiContributions": {
+    "menuItems": [],
+    "widgets": []
+  }
+}

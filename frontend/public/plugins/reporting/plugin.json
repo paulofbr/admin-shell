@@ -1,0 +1,14 @@
+{
+  "id": "reporting",
+  "name": "Reporting Plugin",
+  "version": "1.0.0",
+  "description": "Adds reporting capabilities — generates reports via API endpoints",
+  "main": "index.js",
+  "styles": [],
+  "dependencies": {},
+  "permissions": ["reports:read", "reports:create"],
+  "uiContributions": {
+    "menuItems": [],
+    "widgets": []
+  }
+}

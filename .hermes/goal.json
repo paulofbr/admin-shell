@@ -1,0 +1,12 @@
+{
+  "id": "admin-shell-v1",
+  "name": "Admin Shell Application",
+  "description": "A modular, extensible administration shell framework built with .NET 8+ ASP.NET Core backend and React SPA frontend, supporting convention-based plugin discovery and lifecycle management.",
+  "version": "1.0.0",
+  "priority": "high",
+  "tags": ["dotnet", "aspnetcore", "react", "plugins", "modular", "admin"],
+  "repository": "https://github.com/paulorocha/admin-shell",
+  "goal_type": "application",
+  "total_phases": 5,
+  "current_phase": 1
+}

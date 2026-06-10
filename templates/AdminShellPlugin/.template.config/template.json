@@ -1,0 +1,136 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "Admin Shell Team",
+  "classifications": [
+    "AdminShell",
+    "Plugin",
+    "Web",
+    "ASP.NET"
+  ],
+  "name": "Admin Shell Plugin",
+  "description": "A project template for creating an admin-shell backend plugin. Implements IAdminShellPlugin with optional IApiPlugin, IDataPlugin, IWidgetPlugin, and IMenuPlugin support.",
+  "groupIdentity": "AdminShell.Plugin",
+  "identity": "AdminShell.Plugin.CSharp",
+  "shortName": "adminshell-plugin",
+  "tags": {
+    "language": "C#",
+    "type": "project"
+  },
+  "sourceName": "AdminShellPlugin",
+  "defaultName": "MyPlugin",
+  "preferNameDirectory": true,
+  "symbols": {
+    "pluginId": {
+      "type": "parameter",
+      "displayName": "Plugin ID",
+      "description": "Unique identifier for the plugin (lowercase, no spaces)",
+      "datatype": "string",
+      "defaultValue": "myplugin",
+      "replaces": "PLUGIN_ID_PLACEHOLDER"
+    },
+    "pluginDisplayName": {
+      "type": "parameter",
+      "displayName": "Plugin Display Name",
+      "description": "Human-readable name for the plugin",
+      "datatype": "string",
+      "defaultValue": "My Plugin",
+      "replaces": "PLUGIN_DISPLAY_NAME_PLACEHOLDER"
+    },
+    "pluginDescription": {
+      "type": "parameter",
+      "displayName": "Plugin Description",
+      "description": "Short description of what the plugin does",
+      "datatype": "string",
+      "defaultValue": "A custom admin-shell plugin",
+      "replaces": "PLUGIN_DESCRIPTION_PLACEHOLDER"
+    },
+    "pluginVersion": {
+      "type": "parameter",
+      "displayName": "Plugin Version",
+      "description": "Initial version of the plugin",
+      "datatype": "string",
+      "defaultValue": "1.0.0",
+      "replaces": "PLUGIN_VERSION_PLACEHOLDER"
+    },
+    "includeApiPlugin": {
+      "type": "parameter",
+      "displayName": "Include IApiPlugin",
+      "description": "Adds API endpoint mapping support via IApiPlugin",
+      "datatype": "bool",
+      "defaultValue": "true",
+      "replaces": "INCLUDE_API_PLUGIN"
+    },
+    "includeDataPlugin": {
+      "type": "parameter",
+      "displayName": "Include IDataPlugin",
+      "description": "Adds EF Core entity configuration support via IDataPlugin",
+      "datatype": "bool",
+      "defaultValue": "false",
+      "replaces": "INCLUDE_DATA_PLUGIN"
+    },
+    "includeWidgetPlugin": {
+      "type": "parameter",
+      "displayName": "Include IWidgetPlugin",
+      "description": "Adds dashboard widget support via IWidgetPlugin",
+      "datatype": "bool",
+      "defaultValue": "false",
+      "replaces": "INCLUDE_WIDGET_PLUGIN"
+    },
+    "includeMenuPlugin": {
+      "type": "parameter",
+      "displayName": "Include IMenuPlugin",
+      "description": "Adds menu item contribution support via IMenuPlugin",
+      "datatype": "bool",
+      "defaultValue": "false",
+      "replaces": "INCLUDE_MENU_PLUGIN"
+    },
+    "contractsVersion": {
+      "type": "parameter",
+      "displayName": "AdminShell.Contracts Version",
+      "description": "Version of AdminShell.Contracts to reference",
+      "datatype": "string",
+      "defaultValue": "1.0.0",
+      "replaces": "CONTRACTS_VERSION_PLACEHOLDER"
+    }
+  },
+  "sources": [
+    {
+      "modifiers": [
+        {
+          "condition": "(!includeApiPlugin)",
+          "exclude": [
+            "**/*ApiPlugin*"
+          ]
+        },
+        {
+          "condition": "(!includeDataPlugin)",
+          "exclude": [
+            "**/*DataPlugin*"
+          ]
+        },
+        {
+          "condition": "(!includeWidgetPlugin)",
+          "exclude": [
+            "**/*WidgetPlugin*"
+          ]
+        },
+        {
+          "condition": "(!includeMenuPlugin)",
+          "exclude": [
+            "**/*MenuPlugin*"
+          ]
+        }
+      ]
+    }
+  ],
+  "postActions": [
+    {
+      "actionId": "D396686C-DE0E-4DE6-906D-8CD1F9B029F4",
+      "description": "Restoring NuGet packages",
+      "manualInstructions": [
+        "Restore NuGet packages"
+      ],
+      "continueOnError": true
+    }
+  ]
+}

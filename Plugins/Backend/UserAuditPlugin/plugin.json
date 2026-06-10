@@ -1,0 +1,10 @@
+{
+  "id": "useraudit",
+  "name": "User Audit Plugin",
+  "version": "1.0.0",
+  "description": "Provides user audit trail extending reporting capabilities",
+  "dependencies": {
+    "reporting": ">= 1.0.0"
+  },
+  "permissions": ["audit:read"]
+}
