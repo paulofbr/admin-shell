@@ -18,9 +18,10 @@ export interface UpdateUserRequest {
 export async function getUsers(
   skip = 0,
   take = 10,
+  filters?: { email?: string; username?: string; displayName?: string }
 ): Promise<PaginatedResponse<User>> {
   const response = await client.get<PaginatedResponse<User>>('/api/users', {
-    params: { skip, take },
+    params: { skip, take, ...filters },
   })
   return response.data
 }

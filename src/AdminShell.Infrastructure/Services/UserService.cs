@@ -14,10 +14,10 @@ public class UserService : IUserService
         _auditLog = auditLog;
     }
 
-    public async Task<PagedResult<UserDto>> GetAllAsync(int skip, int take, string? currentUser, CancellationToken ct = default)
+    public async Task<PagedResult<UserDto>> GetAllAsync(int skip, int take, string? email, string? username, string? displayName, string? currentUser, CancellationToken ct = default)
     {
-        var users = await _userRepository.GetAllAsync(skip, take, ct);
-        var total = await _userRepository.GetCountAsync(ct);
+        var users = await _userRepository.GetAllAsync(skip, take, email, username, displayName, ct);
+        var total = await _userRepository.GetCountAsync(email, username, displayName, ct);
         
         var dtos = users.Select(u => new UserDto
         {

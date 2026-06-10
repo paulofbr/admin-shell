@@ -7,8 +7,8 @@ public interface IUserRepository
     Task<User?> GetByIdAsync(Guid id, CancellationToken ct = default);
     Task<User?> GetByEmailAsync(string email, CancellationToken ct = default);
     Task<User?> GetByUsernameAsync(string username, CancellationToken ct = default);
-    Task<IReadOnlyList<User>> GetAllAsync(int skip = 0, int take = 20, CancellationToken ct = default);
-    Task<int> GetCountAsync(CancellationToken ct = default);
+    Task<IReadOnlyList<User>> GetAllAsync(int skip = 0, int take = 20, string? email = null, string? username = null, string? displayName = null, CancellationToken ct = default);
+    Task<int> GetCountAsync(string? email = null, string? username = null, string? displayName = null, CancellationToken ct = default);
     Task<int> GetActiveCountAsync(CancellationToken ct = default);
     Task<List<MonthlyGrowthPoint>> GetMonthlyGrowthAsync(int months = 6, CancellationToken ct = default);
     Task<User> AddAsync(User user, CancellationToken ct = default);

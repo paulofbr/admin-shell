@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("AdminShell.PluginLoader.Tests")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8039e382e6d1f69c18e83e707c533d474f6cb5cf")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+4ebab07b819c599c6d14b9ae7054c774875283c1")]
 [assembly: System.Reflection.AssemblyProductAttribute("AdminShell.PluginLoader.Tests")]
 [assembly: System.Reflection.AssemblyTitleAttribute("AdminShell.PluginLoader.Tests")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

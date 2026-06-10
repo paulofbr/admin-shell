@@ -17,9 +17,15 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll([FromQuery] int skip = 0, [FromQuery] int take = 20, CancellationToken ct = default)
+    public async Task<IActionResult> GetAll(
+        [FromQuery] int skip = 0, 
+        [FromQuery] int take = 20,
+        [FromQuery] string? email = null,
+        [FromQuery] string? username = null,
+        [FromQuery] string? displayName = null,
+        CancellationToken ct = default)
     {
-        var result = await _userService.GetAllAsync(skip, take, User.Identity?.Name, ct);
+        var result = await _userService.GetAllAsync(skip, take, email, username, displayName, User.Identity?.Name, ct);
         return Ok(result);
     }
 

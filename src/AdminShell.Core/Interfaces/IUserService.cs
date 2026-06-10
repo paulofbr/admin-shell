@@ -4,7 +4,7 @@ namespace AdminShell.Core.Interfaces;
 
 public interface IUserService
 {
-    Task<PagedResult<UserDto>> GetAllAsync(int skip, int take, string? currentUser, CancellationToken ct = default);
+    Task<PagedResult<UserDto>> GetAllAsync(int skip, int take, string? email, string? username, string? displayName, string? currentUser, CancellationToken ct = default);
     Task<UserDto?> GetByIdAsync(Guid id, CancellationToken ct = default);
     Task<Result<UserDto>> CreateAsync(CreateUserRequest request, string? currentUser, CancellationToken ct = default);
     Task<Result<UserDto>> UpdateAsync(Guid id, UpdateUserRequest request, string? currentUser, CancellationToken ct = default);

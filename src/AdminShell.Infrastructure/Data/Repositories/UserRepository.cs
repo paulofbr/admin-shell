@@ -49,25 +49,69 @@ public class UserRepository : IUserRepository
         return user;
     }
 
-    public async Task<IReadOnlyList<User>> GetAllAsync(int skip = 0, int take = 20, CancellationToken ct = default)
+    public async Task<IReadOnlyList<User>> GetAllAsync(int skip = 0, int take = 20, string? email = null, string? username = null, string? displayName = null, CancellationToken ct = default)
     {
         using var db = _connectionFactory.CreateConnection();
         db.Open();
-        var users = (await db.QueryAsync<User>(
-            @"SELECT * FROM Users WHERE IsDeleted = 0
-              ORDER BY CreatedAt ASC
-              OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY",
-            new { Skip = skip, Take = take })).ToList();
+        
+        var sql = @"SELECT * FROM Users WHERE IsDeleted = 0";
+   var countSql = "SELECT COUNT(*) FROM Users WHERE IsDeleted = 0";
+        var parameters = new DynamicParameters();
+        parameters.Add("@Skip", skip);
+        parameters.Add("@Take", take);
+        
+        if (!string.IsNullOrEmpty(email))
+        {
+            sql += " AND Email LIKE @Email";
+            countSql += " AND Email LIKE @Email";
+            parameters.Add("@Email", $"%{email}%");
+        }
+        if (!string.IsNullOrEmpty(username))
+        {
+            sql += " AND Username LIKE @Username";
+            countSql += " AND Username LIKE @Username";
+            parameters.Add("@Username", $"%{username}%");
+        }
+        if (!string.IsNullOrEmpty(displayName))
+        {
+            sql += " AND DisplayName LIKE @DisplayName";
+            countSql += " AND DisplayName LIKE @DisplayName";
+            parameters.Add("@DisplayName", $"%{displayName}%");
+        }
+        
+        sql += " ORDER BY CreatedAt ASC OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY";
+        
+        var users = (await db.QueryAsync<User>(sql, parameters)).ToList();
         foreach (var user in users)
             user.Roles = await GetUserRolesAsync(db, user.Id);
         return users;
     }
 
-    public async Task<int> GetCountAsync(CancellationToken ct = default)
+    public async Task<int> GetCountAsync(string? email = null, string? username = null, string? displayName = null, CancellationToken ct = default)
     {
         using var db = _connectionFactory.CreateConnection();
         db.Open();
-        return await db.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM Users WHERE IsDeleted = 0");
+        
+        var sql = "SELECT COUNT(*) FROM Users WHERE IsDeleted = 0";
+        var parameters = new DynamicParameters();
+        
+        if (!string.IsNullOrEmpty(email))
+        {
+            sql += " AND Email LIKE @Email";
+            parameters.Add("@Email", $"%{email}%");
+        }
+        if (!string.IsNullOrEmpty(username))
+        {
+            sql += " AND Username LIKE @Username";
+            parameters.Add("@Username", $"%{username}%");
+        }
+        if (!string.IsNullOrEmpty(displayName))
+        {
+            sql += " AND DisplayName LIKE @DisplayName";
+            parameters.Add("@DisplayName", $"%{displayName}%");
+        }
+        
+        return await db.ExecuteScalarAsync<int>(sql, parameters);
     }
 
     public async Task<int> GetActiveCountAsync(CancellationToken ct = default)

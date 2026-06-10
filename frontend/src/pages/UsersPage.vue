@@ -46,8 +46,30 @@
           @sort-change="handleSort"
           class="desktop-table"
         >
+          <!-- Filter row -->
+          <el-table-column label="" width="1">
+            <template #header>
+              <el-input
+                v-model="filters.email"
+                placeholder="Filter email"
+                size="small"
+                clearable
+                @input="debouncedLoadUsers"
+              />
+            </template>
+          </el-table-column>
+          
           <!-- Built-in columns -->
           <el-table-column label="User" min-width="220">
+            <template #header>
+              <el-input
+                v-model="filters.displayName"
+                placeholder="Filter name"
+                size="small"
+                clearable
+                @input="debouncedLoadUsers"
+              />
+            </template>
             <template #default="{ row }">
               <div style="display: flex; align-items: center; gap: 10px">
                 <el-avatar :size="32" :src="row.avatarUrl">
@@ -60,7 +82,17 @@
               </div>
             </template>
           </el-table-column>
-          <el-table-column prop="username" label="Username" width="130" />
+          <el-table-column prop="username" label="Username" width="130">
+            <template #header>
+              <el-input
+                v-model="filters.username"
+                placeholder="Filter username"
+                size="small"
+                clearable
+                @input="debouncedLoadUsers"
+              />
+            </template>
+          </el-table-column>
 
           <!-- Plugin columns -->
           <el-table-column
@@ -279,6 +311,23 @@ const loading = ref(false)
 const deleting = ref(false)
 const saving = ref(false)
 
+// Inline column filters
+const filters = ref({
+  email: '',
+  username: '',
+  displayName: '',
+})
+
+// Debounce filter search
+let filterDebounceTimer: ReturnType<typeof setTimeout> | null = null
+function debouncedLoadUsers() {
+  if (filterDebounceTimer) clearTimeout(filterDebounceTimer)
+  filterDebounceTimer = setTimeout(() => {
+    skip.value = 0 // Reset to first page
+    loadUsers()
+  }, 300)
+}
+
 const currentPage = computed({
   get: () => Math.floor(skip.value / take) + 1,
   set: (page: number) => {
@@ -416,7 +465,11 @@ async function toggleActive(user: User) {
 async function loadUsers() {
   loading.value = true
   try {
-    const result = await usersApi.getUsers(skip.value, take)
+    const result = await usersApi.getUsers(skip.value, take, {
+      email: filters.value.email || undefined,
+      username: filters.value.username || undefined,
+      displayName: filters.value.displayName || undefined,
+    })
     users.value = result.data
     total.value = result.total
 
