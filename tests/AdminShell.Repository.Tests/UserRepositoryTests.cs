@@ -254,10 +254,10 @@ public class UserRepositoryTests
             new { Id = user.Id });
         rowCount.Should().Be(1, "row should still exist after soft delete");
         var direct = await db.QueryFirstOrDefaultAsync<Dictionary<string, object>>(
-            "SELECT CAST(IsDeleted AS BIT) AS IsDeleted, DeletedAt FROM Users WHERE Id = @Id",
+            "SELECT CAST(IsDeleted AS INT) AS IsDeleted, DeletedAt FROM Users WHERE Id = @Id",
             new { Id = user.Id });
         Assert.NotNull(direct);
-        bool isDeleted = (bool)(direct["IsDeleted"] ?? false);
+        bool isDeleted = direct.TryGetValue("IsDeleted", out var isDeletedVal) && Convert.ToInt32(isDeletedVal) == 1;
         isDeleted.Should().BeTrue();
         DateTime? deletedAt = direct.TryGetValue("DeletedAt", out var dt) ? (DateTime?)dt : null;
         deletedAt.Should().NotBeNull();
