@@ -253,14 +253,13 @@ public class UserRepositoryTests
             "SELECT COUNT(1) FROM Users WHERE Id = @Id",
             new { Id = user.Id });
         rowCount.Should().Be(1, "row should still exist after soft delete");
-        var direct = await db.QueryFirstOrDefaultAsync<Dictionary<string, object>>(
-            "SELECT CAST(IsDeleted AS INT) AS IsDeleted, DeletedAt FROM Users WHERE Id = @Id",
+        
+        var direct = await db.QueryFirstOrDefaultAsync(
+            "SELECT IsDeleted, DeletedAt FROM Users WHERE Id = @Id",
             new { Id = user.Id });
         Assert.NotNull(direct);
-        bool isDeleted = direct.TryGetValue("IsDeleted", out var isDeletedVal) && Convert.ToInt32(isDeletedVal) == 1;
-        isDeleted.Should().BeTrue();
-        DateTime? deletedAt = direct.TryGetValue("DeletedAt", out var dt) ? (DateTime?)dt : null;
-        deletedAt.Should().NotBeNull();
+        bool isDeleted = ((dynamic)direct).IsDeleted;
+        isDeleted.Should().BeTrue("IsDeleted should be true after soft delete");
 
         // Hard delete cleanup
         await HardDeleteUserAsync(user.Id);

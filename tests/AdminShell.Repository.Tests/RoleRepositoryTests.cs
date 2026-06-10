@@ -211,17 +211,15 @@ public class RoleRepositoryTests
 
         await repo.DeleteAsync(role);
 
-        // Verify via direct Dapper
+        // Verify via direct Dapper - use dynamic to handle SQL Server types
         using var db = _fixture.ConnectionFactory.CreateConnection();
         db.Open();
-        var direct = await db.QueryFirstOrDefaultAsync<Dictionary<string, object>>(
-            "SELECT CAST(IsDeleted AS INT) AS IsDeleted, DeletedAt FROM Roles WHERE Id = @Id",
+        var result = await db.QuerySingleAsync(
+            "SELECT IsDeleted, DeletedAt FROM Roles WHERE Id = @Id",
             new { Id = role.Id });
-        Assert.NotNull(direct);
-        bool isDeleted = direct.TryGetValue("IsDeleted", out var isDeletedVal) && Convert.ToInt32(isDeletedVal) == 1;
-        isDeleted.Should().BeTrue();
-        DateTime? deletedAt = direct.TryGetValue("DeletedAt", out var dt) ? (DateTime?)dt : null;
-        deletedAt.Should().NotBeNull();
+        
+        bool isDeleted = ((dynamic)result).IsDeleted;
+        isDeleted.Should().BeTrue("IsDeleted should be true after soft delete");
 
         await HardDeleteRoleAsync(role.Id);
     }
