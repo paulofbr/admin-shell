@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  sql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: adminshell-sql
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=Admin123!@  # Match connection string in appsettings.json
+    ports:
+      - "1434:1433"
+    volumes:
+      - sql-data:/var/opt/mssql
+    restart: unless-stopped
+
+volumes:
+  sql-data:
