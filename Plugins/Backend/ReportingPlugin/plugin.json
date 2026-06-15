@@ -1,8 +1,0 @@
-{
-  "id": "reporting",
-  "name": "Reporting Plugin",
-  "version": "1.0.0",
-  "description": "Adds reporting capabilities to the admin shell",
-  "dependencies": {},
-  "permissions": ["reports:read", "reports:create"]
-}

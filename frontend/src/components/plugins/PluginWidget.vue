@@ -21,24 +21,54 @@
         <div class="spinner spinner--sm" />
       </div>
       <div v-else class="plugin-widget__body">
-        <p class="plugin-widget__placeholder">
-          Widget content for "{{ widget.title }}"
-        </p>
-        <pre v-if="widget.settings" class="plugin-widget__settings">{{ JSON.stringify(widget.settings, null, 2) }}</pre>
+        <component
+          :is="registeredComponent"
+          v-if="registeredComponent"
+          :widget="widget"
+          :plugin-id="pluginId"
+        />
+        <template v-else>
+          <p class="plugin-widget__placeholder">
+            Widget content for "{{ widget.title }}"
+          </p>
+          <pre v-if="widget.settings" class="plugin-widget__settings">{{ JSON.stringify(widget.settings, null, 2) }}</pre>
+        </template>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import type { WidgetDescriptor } from '@/types'
+import { computed, provide, ref } from 'vue'
+import type { Component } from 'vue'
+import type { WidgetDescriptor } from '@/stores/extensionStore'
+import { getPluginComponentOwner, resolvePluginComponent } from '@/utils/pluginComponentRegistry'
+import { getPluginServices } from '@/utils/pluginServices'
 
-defineProps<{
+const props = defineProps<{
   widget: WidgetDescriptor
 }>()
 
 const isRefreshing = ref(false)
+const registeredComponent = computed<Component | undefined>(() =>
+  props.widget.componentName
+    ? resolvePluginComponent(props.widget.componentName) as Component | undefined
+    : undefined,
+)
+
+const pluginId = computed(() =>
+  props.widget.componentName
+    ? getPluginComponentOwner(props.widget.componentName)
+    : undefined,
+)
+
+const pluginServices = computed(() =>
+  pluginId.value ? getPluginServices(pluginId.value) : undefined,
+)
+
+if (pluginId.value && pluginServices.value) {
+  provide(`admin-shell:plugin-services:${pluginId.value}`, pluginServices.value)
+}
 
 function handleRefresh() {
   isRefreshing.value = true

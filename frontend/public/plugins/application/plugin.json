@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "id": "application",
+  "name": "Application Configuration Plugin",
+  "version": "1.0.0",
+  "description": "Plugin que permite alterar configurações base da aplicação, como nome, subtítulo, ícone e favicon.",
+  "main": "index.js",
+  "dependencies": []
+}

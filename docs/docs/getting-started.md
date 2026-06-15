@@ -44,7 +44,7 @@ All **9 tests** should pass.
 
 ### Configuration
 
-The backend reads configuration from `src/AdminShell.Host/appsettings.json` and `appsettings.Development.json`. Key settings:
+The backend reads configuration from `backend/AdminShell.Host/appsettings.json` and `appsettings.Development.json`. Key settings:
 
 ```json
 {
@@ -67,12 +67,12 @@ The backend reads configuration from `src/AdminShell.Host/appsettings.json` and 
 ### Run the Backend
 
 ```bash
-cd src/AdminShell.Host
+cd backend/AdminShell.Host
 dotnet run
 ```
 
 The API will be available at `http://localhost:5000`.  
-Swagger UI is at `http://localhost:5000/swagger`.
+Scalar API reference is at `http://localhost:5000/scalar`.
 
 ---
 
@@ -100,14 +100,15 @@ The frontend development server runs at `http://localhost:3000` and proxies API 
 Open your browser and navigate to `http://localhost:3000`. You should see:
 
 - The Admin Shell login page
-- Swagger documentation at `http://localhost:5000/swagger`
+- Scalar API reference at `http://localhost:5000/scalar`
+- OpenAPI document at `http://localhost:5000/openapi/v1.json`
 - Health check responding at `http://localhost:5000/api/health`
 
 ---
 
 ## 5. Running Plugins
 
-Backend plugins are automatically discovered from the `Plugins/` directory. The application includes two sample plugins:
+Backend plugins are automatically discovered from the `plugins/` directory. The application includes two sample plugins:
 
 | Plugin            | Description                                       |
 |-------------------|---------------------------------------------------|
@@ -132,10 +133,10 @@ Use the `adminshell-plugin` dotnet new template:
 dotnet new install ./templates/AdminShellPlugin
 
 # Create a new plugin
-dotnet new adminshell-plugin -n MyPlugin -o Plugins/Backend/MyPlugin
+dotnet new adminshell-plugin -n MyPlugin -o plugins/MyPlugin
 
 # Build it
-dotnet build Plugins/Backend/MyPlugin/MyPlugin.csproj
+dotnet build plugins/MyPlugin/Backend/MyPlugin.csproj
 ```
 
 See the [Plugin Development](plugin-development.md) guide for detailed instructions.

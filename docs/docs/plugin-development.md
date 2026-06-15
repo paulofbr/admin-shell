@@ -6,7 +6,7 @@ This guide explains how to create, package, and distribute plugins for Admin She
 
 ## Overview
 
-Plugins are the primary extension mechanism for Admin Shell. A plugin is a .NET class library that implements one or more interfaces from `AdminShell.Contracts`. Plugins are discovered at startup by scanning the `Plugins/` directory, resolved by dependency order, and loaded via reflection.
+Plugins are the primary extension mechanism for Admin Shell. A plugin is a .NET class library that implements one or more interfaces from `AdminShell.Contracts`. Plugins are discovered at startup by scanning the `plugins/` directory, resolved by dependency order, and loaded via reflection.
 
 ### Plugin Types
 
@@ -35,19 +35,20 @@ dotnet new install ./templates/AdminShellPlugin
 ```bash
 dotnet new adminshell-plugin \
     -n MyPlugin \
-    -o Plugins/Backend/MyPlugin \
+    -o plugins/MyPlugin \
     --pluginId myplugin \
     --pluginDisplayName "My Plugin" \
     --pluginDescription "A description of my plugin" \
     --pluginVersion 1.0.0
 ```
 
-The template generates:
+The template generates a backend project under the plugin root:
 
-- `MyPlugin.csproj` — Project file targeting `net9.0` with a reference to `AdminShell.Contracts`
-- `Plugin.cs` — Main plugin class implementing `IAdminShellPlugin` and `IApiPlugin`
-- `plugin.json` — Manifest with plugin metadata
-- `GlobalUsings.cs` — Common using directives
+- `plugins/MyPlugin/manifest.json` — Source manifest with plugin metadata
+- `plugins/MyPlugin/Backend/MyPlugin.csproj` — Project file targeting `net10.0` with a reference to `AdminShell.Contracts`
+- `plugins/MyPlugin/Backend/Plugin.cs` — Main plugin class implementing `IAdminShellPlugin` and optional plugin interfaces
+- `plugins/MyPlugin/Backend/dependencias/` — Backend dependency DLLs/PDBs copied by build/package
+- `plugins/MyPlugin/FrontEnd/` — Optional Vue/TypeScript frontend source folder
 
 ---
 
@@ -56,9 +57,9 @@ The template generates:
 ### Step 1: Create the project
 
 ```bash
-mkdir -p Plugins/Backend/MyPlugin
-cd Plugins/Backend/MyPlugin
-dotnet new classlib -n MyPlugin --framework net9.0
+mkdir -p plugins/MyPlugin/Backend
+cd plugins/MyPlugin/Backend
+dotnet new classlib -n MyPlugin --framework net10.0
 ```
 
 ### Step 2: Add the project file
@@ -69,12 +70,11 @@ Edit `MyPlugin.csproj`:
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <RootNamespace>MyPlugin</RootNamespace>
-    <OutputPath>../</OutputPath>
-    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <OutputPath>bin/$(Configuration)/</OutputPath>
   </PropertyGroup>
 
   <ItemGroup>
@@ -82,34 +82,38 @@ Edit `MyPlugin.csproj`:
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../../src/AdminShell.Contracts/AdminShell.Contracts.csproj" />
+    <ProjectReference Include="../../../backend/AdminShell.Contracts/AdminShell.Contracts.csproj" />
   </ItemGroup>
-
-  <ItemGroup>
-    <None Update="plugin.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
+  <Target Name="CopyPluginDependencies" AfterTargets="Build;Publish">
+    <ItemGroup>
+      <PluginDependency Include="$(OutputPath)*.dll" Exclude="$(OutputPath)$(AssemblyName).dll" />
+      <PluginDependency Include="$(OutputPath)*.pdb" Exclude="$(OutputPath)$(AssemblyName).pdb" />
+    </ItemGroup>
+    <MakeDir Directories="$(MSBuildProjectDirectory)/dependencias" />
+    <Copy SourceFiles="@(PluginDependency)" DestinationFolder="$(MSBuildProjectDirectory)/dependencias" SkipUnchangedFiles="true" />
+  </Target>
 
 </Project>
 ```
 
-> **Note:** Setting `OutputPath` to `../` places the compiled assembly alongside `Plugins/Backend/` so the plugin loader can find it.
+> **Note:** Setting `OutputPath` to `bin/$(Configuration)/` keeps build output inside `plugins/MyPlugin/Backend/bin/Release/net10.0/`. The loader walks up from the assembly path to `plugins/MyPlugin/` and reads `manifest.json`.
 
 ### Step 3: Create the plugin manifest
 
-Create `plugin.json`:
+Create `manifest.json` in the plugin root:
 
 ```json
 {
+  "schemaVersion": 1,
   "id": "myplugin",
   "name": "My Plugin",
   "version": "1.0.0",
   "description": "Description of my plugin",
-  "dependencies": {},
-  "permissions": ["myplugin:read"]
+  "dependencies": []
 }
 ```
+
+Permissions are not declared in the manifest. Frontend plugins can export a `permissions` object from their frontend entry file when permissions are needed.
 
 ### Step 4: Implement the plugin
 
@@ -160,10 +164,62 @@ public class MyPlugin : IAdminShellPlugin, IApiPlugin
 ### Step 5: Build and test
 
 ```bash
-dotnet build Plugins/Backend/MyPlugin/MyPlugin.csproj
+dotnet build plugins/MyPlugin/Backend/MyPlugin.csproj
 ```
 
-The compiled assembly (`MyPlugin.dll`) will be placed in `Plugins/Backend/`. Restart the application to see it loaded.
+The compiled assembly (`MyPlugin.dll`) will be placed in `plugins/MyPlugin/Backend/bin/Release/net10.0/`. Restart the application to see it loaded.
+
+---
+
+## Packaging
+
+The deployable package must be a `.zip` with this structure:
+
+```text
+plugin.zip
+  manifest.json
+  backend/
+    MyPlugin.dll
+    MyPlugin.deps.json
+    MyPlugin.runtimeconfig.json
+    dependencies...
+  frontend/
+    index.js
+    styles.css
+    assets/
+```
+
+The `frontend/` folder is the compiled plugin frontend. Plugin source should follow:
+
+```text
+plugins/MyPlugin/
+  manifest.json
+  Backend/
+    MyPlugin.csproj
+    MyPlugin.cs
+  FrontEnd/ (optional)
+    package.json
+    src/
+    dist/
+```
+
+- Backend: .NET plugin code and API/data/widget/menu implementations.
+- FrontEnd: Vue SFCs (`.vue`) for new pages/components and TypeScript (`.ts`) for non-UI code.
+- Built `index.js` runtime entry in `FrontEnd/dist/` when the plugin has frontend assets.
+
+A helper script is available:
+
+```bash
+scripts/package-plugin.sh <plugin-root> [output-dir]
+```
+
+Example:
+
+```bash
+scripts/package-plugin.sh plugins/OrderCreationPlugin dist/plugins
+```
+
+The browser should not extract tar files or upload frontend files separately. The backend owns package validation, extraction, dependency validation, migration execution, activation, and rollback.
 
 ---
 
@@ -344,53 +400,83 @@ public IEnumerable<MenuItem> GetMenuItems()
 
 ## Plugin Dependencies
 
-Plugins can declare dependencies on other plugins using the `[PluginDependency]` assembly attribute:
-
-```csharp
-[assembly: PluginDependency(typeof(ReportingPlugin.ReportingPlugin), ">= 1.0.0")]
-```
-
-The plugin loader uses **topological sorting** to initialize plugins in the correct order. Circular dependencies are detected and reported at startup.
-
-Dependencies can also be declared in `plugin.json`:
+Plugins declare dependencies in the manifest only:
 
 ```json
 {
+  "schemaVersion": 1,
   "id": "useraudit",
   "name": "User Audit Plugin",
   "version": "1.0.0",
-  "dependencies": {
-    "reporting": ">= 1.0.0"
-  }
+  "dependencies": [
+    {
+      "id": "reporting",
+      "version": ">= 1.0.0"
+    }
+  ]
 }
 ```
 
 ---
 
-## Plugin Manifest (plugin.json)
+## Plugin Manifest (manifest.json)
 
-Every plugin must include a `plugin.json` manifest file:
+Every plugin source root must include a `manifest.json` next to `Backend/` and `FrontEnd/`. The deployable package also uses `manifest.json` at the package root.
 
 | Field          | Type   | Required | Description                              |
 |----------------|--------|----------|------------------------------------------|
-| `id`           | string | Yes      | Unique plugin identifier (lowercase)     |
-| `name`         | string | Yes      | Human-readable name                      |
-| `version`      | string | Yes      | SemVer version                           |
-| `description`  | string | Yes      | Short description                        |
-| `dependencies` | object | No       | Map of plugin ID to version constraint   |
-| `permissions`  | array  | No       | Array of permission strings              |
+| `schemaVersion` | number | Yes      | Manifest schema version                  |
+| `id`            | string | Yes      | Unique plugin identifier (lowercase)     |
+| `name`          | string | Yes      | Human-readable name                      |
+| `version`       | string | Yes      | SemVer version                           |
+| `description`   | string | Yes      | Short description                        |
+| `dependencies`  | array  | No       | Array of dependency objects with `id` and `version` |
 
 ---
 
 ## Frontend Plugin Integration
 
-When your backend plugin contributes a widget or menu, the frontend needs corresponding components:
+When your backend plugin contributes a widget, menu item, tab, or page component, the frontend plugin needs corresponding Vue components.
 
-1. Add a frontend plugin entry in `frontend/src/plugins/{pluginId}/`
-2. Export React components matching the `ComponentName` in `WidgetDescriptor`
-3. Register routes matching the `Path` in `MenuItem`
+Use this source convention inside the plugin frontend project:
 
-This is covered in the frontend plugin documentation (coming soon).
+```text
+FrontEnd/
+  backend/
+    index.ts
+    permissions.ts
+    pages/
+      ReportsPage.vue
+    services/
+      reportingApi.ts
+    types/
+      reporting.ts
+```
+
+Rules:
+
+- New pages/components must be Vue SFCs (`.vue`).
+- Non-UI code must be TypeScript (`.ts`): services, types, permissions, composables.
+- The built runtime entry is `index.js` under `FrontEnd/dist/`.
+- Routes must not be declared in the manifest.
+- Permissions stay outside the manifest and are exported by the frontend entry or from `permissions.ts`.
+
+Example entry:
+
+```ts
+import { ReportsPage } from './pages/ReportsPage.vue'
+import { permissions } from './permissions'
+
+export { permissions }
+
+export default class ReportingPlugin {
+  initialize(container, services) {
+    services.components.register('ReportsPage', ReportsPage)
+  }
+
+  dispose() {}
+}
+```
 
 ---
 
@@ -398,7 +484,7 @@ This is covered in the frontend plugin documentation (coming soon).
 
 - **Keep plugins focused** — Each plugin should do one thing well
 - **Use semantic versioning** — Follow SemVer for plugin versions
-- **Declare dependencies explicitly** — Use `[PluginDependency]` and `plugin.json`
+- **Declare dependencies explicitly** — Use manifest `dependencies[]` with `id` and `version`
 - **Log at startup** — Log initialization to help with debugging
 - **Isolate state** — Use scoped DI services rather than static state
 - **Handle graceful degradation** — If a dependency is missing, log a warning and continue

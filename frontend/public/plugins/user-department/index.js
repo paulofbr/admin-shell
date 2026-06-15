@@ -1,6 +1,11 @@
 // User Department Plugin — Frontend
 // Adds a Department column + filter dropdown to the Users table
 
+export const permissions = {
+  usersRead: ['users:read'],
+  usersDepartment: ['users:department'],
+}
+
 const DEPARTMENTS = [
   { id: 'eng', name: 'Engineering', color: '#6366f1' },
   { id: 'marketing', name: 'Marketing', color: '#10b981' },
@@ -20,13 +25,16 @@ export default class UserDepartmentPlugin {
   }
 
   async initialize(container, services) {
+    this._services = services;
     const eventBus = services.eventBus;
+    const api = services.api;
+    const ui = services.ui;
 
     // Fetch departments and pre-warm cache via plugin API
     try {
-      const deptRes = await fetch('/api/plugins/user-department/departments');
+      const deptRes = await api.get('/departments');
       if (deptRes.ok) {
-        const depts = await deptRes.json();
+        const depts = deptRes.data;
         // Build a lookup map
         depts.forEach(d => this._departmentCache.set(d.id, d));
       }
@@ -36,14 +44,13 @@ export default class UserDepartmentPlugin {
     }
 
     // Register the department column contribution
-    eventBus.publish('plugin:table:register-column', {
+    ui.registerTableColumn('users', {
       pluginId: this.id,
       id: 'department',
       label: 'Department',
       width: 140,
       filterType: 'select',
       filterOptions: DEPARTMENTS.map(d => ({ label: d.name, value: d.id })),
-      // render returns HTML string for the cell
       render: (user) => {
         const dept = this._getDepartmentForUser(user);
         if (!dept) return '<span style="color:var(--el-text-color-placeholder)">—</span>';
@@ -82,6 +89,11 @@ export default class UserDepartmentPlugin {
       return this._departmentCache.get(user.id);
     }
 
+    // If the table plugin already stored a department id, resolve it
+    if (user._department) {
+      return this._departmentCache.get(user._department);
+    }
+
     // Deterministic fallback
     const hash = this._hashCode(user.id);
     const depts = DEPARTMENTS;
@@ -90,9 +102,10 @@ export default class UserDepartmentPlugin {
 
   async _fetchUserDepartment(user) {
     try {
-      const res = await fetch(`/api/plugins/user-department/users/${user.id}/department`);
+      const api = this._services?.api;
+      const res = await api.get(`/users/${user.id}/department`);
       if (res.ok) {
-        const data = await res.json();
+        const data = res.data;
         // The department data will be used by the render function
         // Store it for the render callback
         user._department = data.departmentId;

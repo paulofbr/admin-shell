@@ -1,4 +1,5 @@
 # Build outputs
+/dist/
 **/bin/
 **/obj/
 
@@ -14,9 +15,18 @@ frontend/node_modules/
 frontend/dist/
 frontend/.vite/
 
-# Plugins build artifacts
-Plugins/**/bin/
-Plugins/**/obj/
+# plugins build artifacts
+plugins/**/Backend/bin/
+plugins/**/Backend/obj/
+plugins/**/Backend/dependencias/*.dll
+plugins/**/Backend/dependencias/*.pdb
+plugins/**/Backend/dependencias/*.deps.json
+plugins/**/FrontEnd/node_modules/
+plugins/**/FrontEnd/dist/
+plugins/**/FrontEnd/.vite/
+
+# backend runtime plugin copies
+backend/AdminShell.Host/plugins/
 
 # Logs
 *.log

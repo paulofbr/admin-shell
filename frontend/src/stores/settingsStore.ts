@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import * as settingsApi from '@/api/settings'
 
 export interface AppSetting {
   key: string
@@ -15,13 +16,6 @@ export interface SettingsState {
   saving: boolean
   error: string | null
 }
-
-function getAuthHeaders(): Record<string, string> {
-  const token = localStorage.getItem('auth_token')
-  return token ? { Authorization: `Bearer ${token}` } : {}
-}
-
-const API_BASE = '/api'
 
 export const useSettingsStore = defineStore('settings', {
   state: (): SettingsState => ({
@@ -52,18 +46,16 @@ export const useSettingsStore = defineStore('settings', {
       this.error = null
 
       try {
-        const res = await fetch(`${API_BASE}/settings`, {
-          headers: getAuthHeaders(),
-        })
-        if (!res.ok) throw new Error(`Failed to load settings: ${res.status}`)
-        this.settings = await res.json()
+        this.settings = (await settingsApi.getSettings()).map((setting) => ({
+          key: setting.key,
+          value: setting.value,
+          category: setting.category,
+          description: setting.description,
+          valueType: setting.valueType ?? '',
+        }))
 
-        const catRes = await fetch(`${API_BASE}/settings/categories`, {
-          headers: getAuthHeaders(),
-        })
-        if (catRes.ok) {
-          this.categories = await catRes.json()
-        }
+        const categories = await settingsApi.getSettingCategories()
+        this.categories = categories
       } catch (e: unknown) {
         this.error = e instanceof Error ? e.message : 'Unknown error'
       } finally {
@@ -75,14 +67,11 @@ export const useSettingsStore = defineStore('settings', {
       this.saving = true
 
       try {
-        const payload = Object.entries(changes).map(([key, value]) => ({ key, value }))
-        const res = await fetch(`${API_BASE}/settings`, {
-          method: 'PUT',
-          headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        })
-        if (!res.ok) throw new Error(`Failed to save settings: ${res.status}`)
-        for (const [key, value] of Object.entries(changes)) {
+        const changesList = Object.entries(changes).map(([key, value]) => ({ key, value }))
+        await settingsApi.saveSettings(Object.fromEntries(changesList.map(({ key, value }) => [key, value] as const)))
+        for (const change of changesList) {
+          const key = change.key
+          const value = change.value
           const idx = this.settings.findIndex((s) => s.key === key)
           if (idx >= 0) this.settings[idx].value = value
         }

@@ -254,11 +254,9 @@ public class UserRepositoryTests
             new { Id = user.Id });
         rowCount.Should().Be(1, "row should still exist after soft delete");
         
-        var direct = await db.QueryFirstOrDefaultAsync(
-            "SELECT IsDeleted, DeletedAt FROM Users WHERE Id = @Id",
+        var isDeleted = await db.ExecuteScalarAsync<bool>(
+            "SELECT IsDeleted FROM Users WHERE Id = @Id",
             new { Id = user.Id });
-        Assert.NotNull(direct);
-        bool isDeleted = ((dynamic)direct).IsDeleted;
         isDeleted.Should().BeTrue("IsDeleted should be true after soft delete");
 
         // Hard delete cleanup

@@ -5,13 +5,15 @@
         <h2 class="page__title">Users</h2>
         <p class="page__subtitle">Manage user accounts</p>
       </div>
-      <div style="display: flex; gap: 8px">
+      <div style="display: flex; gap: 8px; flex-wrap: wrap">
+       
         <el-button :icon="Refresh" round @click="loadUsers" :loading="loading">
           Refresh
         </el-button>
         <el-button type="primary" :icon="Plus" round @click="openCreateDialog">
           Add User
         </el-button>
+        <HeaderActions target="page.toolbar" target-page="users" />
       </div>
     </div>
 
@@ -36,223 +38,104 @@
     </div>
 
     <el-card shadow="never">
-      <!-- Desktop Table View -->
-      <div class="table-wrapper">
-        <el-table
-          v-loading="loading"
-          :data="users"
-          stripe
-          style="width: 100%"
-          @sort-change="handleSort"
-          class="desktop-table"
-        >
-          <!-- Filter row -->
-          <el-table-column label="" width="1">
-            <template #header>
-              <el-input
-                v-model="filters.email"
-                placeholder="Filter email"
-                size="small"
-                clearable
-                @input="debouncedLoadUsers"
-              />
-            </template>
-          </el-table-column>
-          
-          <!-- Built-in columns -->
-          <el-table-column label="User" min-width="220">
-            <template #header>
-              <el-input
-                v-model="filters.displayName"
-                placeholder="Filter name"
-                size="small"
-                clearable
-                @input="debouncedLoadUsers"
-              />
-            </template>
-            <template #default="{ row }">
-              <div style="display: flex; align-items: center; gap: 10px">
-                <el-avatar :size="32" :src="row.avatarUrl">
-                  {{ row.displayName?.[0] ?? row.username[0] }}
-                </el-avatar>
-                <div>
-                  <div style="font-weight: 500">{{ row.displayName ?? row.username }}</div>
-                  <div style="font-size: 12px; color: var(--el-text-color-secondary)">{{ row.email }}</div>
-                </div>
-              </div>
-            </template>
-          </el-table-column>
-          <el-table-column prop="username" label="Username" width="130">
-            <template #header>
-              <el-input
-                v-model="filters.username"
-                placeholder="Filter username"
-                size="small"
-                clearable
-                @input="debouncedLoadUsers"
-              />
-            </template>
-          </el-table-column>
-
-          <!-- Plugin columns -->
-          <el-table-column
-            v-for="col in pluginTableColumns"
-            :key="col.id"
-            :label="col.label"
-            :width="col.width"
-          >
-            <template #default="{ row }">
-              <span v-html="col.render(row as any)" />
-            </template>
-          </el-table-column>
-
-          <el-table-column label="Roles" width="180">
-            <template #default="{ row }">
-              <el-tag
-                v-for="role in row.roles"
-                :key="role.id"
-                size="small"
-                style="margin-right: 4px; margin-bottom: 2px"
-              >
-                {{ role.name }}
-              </el-tag>
-              <span v-if="row.roles.length === 0" style="color: var(--el-text-color-placeholder)">—</span>
-            </template>
-          </el-table-column>
-
-          <el-table-column prop="isActive" label="Active" width="80" align="center">
-            <template #default="{ row }">
-              <el-switch
-                :model-value="row.isActive"
-                size="small"
-                @click.prevent.stop
-                @change="toggleActive(row)"
-              />
-            </template>
-          </el-table-column>
-
-          <el-table-column label="Created" width="120">
-            <template #default="{ row }">
-              <span style="font-size: 13px; color: var(--el-text-color-secondary)">
-                {{ new Date(row.createdAt).toLocaleDateString() }}
-              </span>
-            </template>
-          </el-table-column>
-
-          <el-table-column label="Actions" width="120" fixed="right">
-            <template #default="{ row }">
-              <el-button type="primary" size="small" text @click="openEditDialog(row)">
-                Edit
-              </el-button>
-              <el-popconfirm
-                title="Delete this user?"
-                confirm-button-text="Delete"
-                confirm-button-type="danger"
-                @confirm="handleDelete(row)"
-              >
-                <template #reference>
-                  <el-button type="danger" size="small" text>
-                    Delete
-                  </el-button>
-                </template>
-              </el-popconfirm>
-            </template>
-          </el-table-column>
-        </el-table>
-      </div>
-
-      <!-- Mobile Card View -->
-      <div v-if="users.length > 0 && !loading" class="mobile-cards">
-        <div v-for="user in users" :key="user.id" class="user-card">
-          <div class="user-card__header">
-            <el-avatar :size="36" :src="user.avatarUrl">
-              {{ user.displayName?.[0] ?? user.username[0] }}
+      <ResponsiveGrid
+        :data="users as unknown as GridRow[]"
+        :columns="gridColumns"
+        :filters="gridFilters"
+        :loading="loading"
+        :edit-mode="'popup'"
+        empty-text="No users"
+        @filter-change="handleFilterChange"
+      >
+        <template #cell-user="{ row }">
+          <div style="display: flex; align-items: center; gap: 10px">
+            <el-avatar :size="32" :src="(row as unknown as User).avatarUrl">
+              {{ getUserInitial(row as unknown as User) }}
             </el-avatar>
-            <div class="user-card__title">
-              <span class="user-card__name">{{ user.displayName ?? user.username }}</span>
-              <span class="user-card__email">{{ user.email }}</span>
-            </div>
-            <el-switch
-              :model-value="user.isActive"
-              size="small"
-              @click.prevent.stop
-              @change="toggleActive(user)"
-            />
-          </div>
-          
-          <div class="user-card__content">
-            <div class="user-card__field">
-              <span class="user-card__label">Username</span>
-              <span class="user-card__value">{{ user.username }}</span>
-            </div>
-            <div class="user-card__field">
-              <span class="user-card__label">Roles</span>
-              <div class="user-card__roles">
-                <el-tag
-                  v-for="role in user.roles"
-                  :key="role.id"
-                  size="small"
-                  style="margin-right: 4px; margin-bottom: 2px"
-                >
-                  {{ role.name }}
-                </el-tag>
-                <span v-if="user.roles.length === 0" style="color: var(--el-text-color-placeholder)">—</span>
-              </div>
-            </div>
-            <div class="user-card__field">
-              <span class="user-card__label">Created</span>
-              <span class="user-card__value">{{ new Date(user.createdAt).toLocaleDateString() }}</span>
+            <div>
+              <div style="font-weight: 500">{{ (row as unknown as User).displayName ?? (row as unknown as User).username ?? '—' }}</div>
+              <div style="font-size: 12px; color: var(--el-text-color-secondary)">{{ (row as unknown as User).email ?? '—' }}</div>
             </div>
           </div>
+        </template>
 
-          <div class="user-card__actions">
-            <el-button type="primary" size="small" @click="openEditDialog(user)">
-              Edit
-            </el-button>
-            <el-popconfirm
-              title="Delete this user?"
-              confirm-button-text="Delete"
-              confirm-button-type="danger"
-              @confirm="handleDelete(user)"
-            >
-              <template #reference>
-                <el-button type="danger" size="small">
-                  Delete
-                </el-button>
-              </template>
-            </el-popconfirm>
-          </div>
-        </div>
-      </div>
+        <template #cell-username="{ value }">
+          {{ value ?? '—' }}
+        </template>
 
-      <div v-if="totalPages > 1" style="display: flex; justify-content: center; padding: 16px 0">
-        <el-pagination
-          v-model:current-page="currentPage"
-          :page-size="take"
-          :total="total"
-          layout="prev, pager, next"
-          background
-          @current-change="handlePageChange"
-        />
-      </div>
+        <template
+          v-for="col in pluginTableColumns"
+          :key="`plugin-${col.id}`"
+          #[`cell-${col.id}`]="{ row }"
+        >
+          <span v-html="col.render(row as any)" />
+        </template>
+
+        <template #cell-roles="{ row }">
+          <el-tag
+            v-for="role in ((row as unknown as User).roles ?? [])"
+            :key="role.id"
+            size="small"
+            style="margin-right: 4px; margin-bottom: 2px"
+          >
+            {{ role.name }}
+          </el-tag>
+          <span v-if="((row as unknown as User).roles ?? []).length === 0" style="color: var(--el-text-color-placeholder)">—</span>
+        </template>
+
+        <template #cell-active="{ row }">
+          <el-switch
+            :model-value="(row as unknown as User).isActive"
+            size="small"
+            @click.prevent.stop
+            @change="toggleActive(row as unknown as User)"
+          />
+        </template>
+
+        <template #cell-created="{ row }">
+          <span style="font-size: 13px; color: var(--el-text-color-secondary)">
+            {{ new Date((row as unknown as User).createdAt).toLocaleDateString() }}
+          </span>
+        </template>
+
+        <template #cell-actions="{ row }">
+          <el-button type="primary" size="small" text @click="openEditDialog(row as unknown as User)">Edit</el-button>
+          <el-popconfirm
+            title="Delete this user?"
+            confirm-button-text="Delete"
+            confirm-button-type="danger"
+            @confirm="handleDelete(row as unknown as User)"
+          >
+            <template #reference>
+              <el-button type="danger" size="small" text>Delete</el-button>
+            </template>
+          </el-popconfirm>
+        </template>
+      </ResponsiveGrid>
     </el-card>
 
     <!-- Create / Edit Dialog -->
     <el-dialog
       v-model="dialogVisible"
-      :title="isEditing ? 'Edit User' : 'Add User'"
       width="90%"
       :style="{'--el-dialog-width': dialogWidth}"
       :close-on-click-modal="false"
       center
     >
-      <el-form
-        ref="formRef"
-        :model="form"
-        :rules="formRules"
-        label-position="top"
-        @submit.prevent="handleSave"
+      <EntityEditor
+        :title="isEditing ? 'Edit User' : 'Add User'"
+        :save-label="isEditing ? 'Save Changes' : 'Create User'"
+        :save-loading="saving"
+        :on-save="handleSave"
+        :on-cancel="() => dialogVisible = false"
       >
+        <el-form
+          ref="formRef"
+          :model="formModel"
+          :rules="formRules"
+          label-position="top"
+          @submit.prevent="handleSave"
+        >
         <el-form-item label="Email" prop="email">
           <el-input v-model="form.email" placeholder="user@example.com" />
         </el-form-item>
@@ -279,29 +162,83 @@
         <el-form-item v-if="isEditing" label="Active" prop="isActive">
           <el-switch v-model="form.isActive" />
         </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="dialogVisible = false">Cancel</el-button>
-        <el-button type="primary" :loading="saving" @click="handleSave">
-          {{ saving ? 'Saving...' : isEditing ? 'Save Changes' : 'Create User' }}
-        </el-button>
-      </template>
+
+        <template v-for="field in activeExtraFields" :key="field.key">
+          <el-form-item
+            :label="field.label"
+            :prop="field.key"
+            :required="field.required"
+          >
+            <el-select
+              v-if="field.inputType === 'select'"
+              v-model="extraFields[field.key]"
+              :placeholder="`Select ${field.label.toLowerCase()}`"
+              clearable
+            >
+              <el-option
+                v-for="option in field.options"
+                :key="option.value"
+                :label="option.label"
+                :value="option.value"
+              />
+            </el-select>
+            <el-input
+              v-else-if="field.inputType === 'textarea'"
+              v-model="extraFields[field.key]"
+              type="textarea"
+              :placeholder="field.placeholder"
+              :rows="field.rows"
+            />
+            <el-input
+              v-else-if="field.inputType === 'number'"
+              v-model.number="extraFields[field.key]"
+              type="number"
+              :placeholder="field.placeholder"
+            />
+            <el-input
+              v-else-if="field.inputType === 'date'"
+              v-model="extraFields[field.key]"
+              type="date"
+              :placeholder="field.placeholder"
+            />
+            <el-input
+              v-else
+              v-model="extraFields[field.key]"
+              :placeholder="field.placeholder"
+            />
+          </el-form-item>
+        </template>
+        </el-form>
+      </EntityEditor>
     </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { usePluginStore } from '@/stores/pluginStore'
+import { useExtensionStore, type FormFieldDescriptor } from '@/stores/extensionStore'
+import HeaderActions from '@/components/common/HeaderActions.vue'
+import EntityEditor from '@/components/common/EntityEditor.vue'
+import ResponsiveGrid, {
+  type GridColumn,
+  type GridFilter,
+  type GridRow,
+} from '@/components/common/ResponsiveGrid.vue'
 import { useNotificationStore } from '@/stores/notificationStore'
 import eventBus from '@/utils/eventBus'
 import * as usersApi from '@/api/users'
 import type { User } from '@/types'
+import { ElMessage } from 'element-plus'
+import { authApi } from '@/services/api'
 import { Refresh, Plus } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
 
 const pluginStore = usePluginStore()
 const notificationStore = useNotificationStore()
+const extensionStore = useExtensionStore()
+const route = useRoute()
 
 const users = ref<User[]>([])
 const total = ref(0)
@@ -318,6 +255,18 @@ const filters = ref({
   displayName: '',
 })
 
+function getUserInitial(user: User): string {
+  const displayName = user.displayName?.trim()
+  const username = user.username?.trim()
+  return (displayName ?? username ?? '?')[0]?.toUpperCase() ?? '?'
+}
+
+const gridFilters: GridFilter[] = [
+  { id: 'email', label: 'Email', type: 'text', placeholder: 'Filter email' },
+  { id: 'username', label: 'Username', type: 'text', placeholder: 'Filter username' },
+  { id: 'displayName', label: 'Display Name', type: 'text', placeholder: 'Filter name' },
+]
+
 // Debounce filter search
 let filterDebounceTimer: ReturnType<typeof setTimeout> | null = null
 function debouncedLoadUsers() {
@@ -328,20 +277,34 @@ function debouncedLoadUsers() {
   }, 300)
 }
 
-const currentPage = computed({
-  get: () => Math.floor(skip.value / take) + 1,
-  set: (page: number) => {
-    skip.value = (page - 1) * take
-  },
-})
-
-const totalPages = computed(() => Math.ceil(total.value / take))
+function handleFilterChange(payload: { id: string; value: unknown }) {
+  const value = payload.value === null || payload.value === undefined ? '' : String(payload.value)
+  filters.value = {
+    ...filters.value,
+    [payload.id]: value,
+  }
+  debouncedLoadUsers()
+}
 
 // Responsive dialog width
 const dialogWidth = computed(() => window.innerWidth < 768 ? '95%' : '520px')
 
 // Plugin contributions
 const pluginTableColumns = computed(() => pluginStore.tableColumns)
+
+const gridColumns = computed<GridColumn[]>(() => [
+  { id: 'user', label: 'User', minWidth: '220' },
+  { id: 'username', label: 'Username', prop: 'username', width: '130' },
+  ...pluginTableColumns.value.map((col) => ({
+    id: col.id,
+    label: col.label,
+    width: col.width,
+  })),
+  { id: 'roles', label: 'Roles', width: '180' },
+  { id: 'active', label: 'Active', prop: 'isActive', width: '80' },
+  { id: 'created', label: 'Created', width: '120' },
+  { id: 'actions', label: 'Actions', width: '120', fixed: 'right' },
+])
 
 const pluginFilters = computed(() =>
   pluginStore.tableColumns
@@ -368,6 +331,8 @@ const form = ref({
   password: '',
   isActive: true,
 })
+const extraFields = ref<Record<string, any>>({})
+const formModel = computed(() => ({ ...form.value, ...extraFields.value }))
 
 const formRules: FormRules = {
   email: [
@@ -394,10 +359,78 @@ const formRules: FormRules = {
   ],
 }
 
+const activeExtraFields = computed<FormFieldDescriptor[]>(() =>
+  extensionStore.getFormFieldsForForm(isEditing.value ? 'user.edit' : 'user.create'),
+)
+
+async function validateExtraFields() {
+  for (const field of activeExtraFields.value) {
+    const value = extraFields.value[field.key]
+    if (field.required && (value === undefined || value === null || value === '')) {
+      ElMessage.error(`${field.label} is required`)
+      return false
+    }
+
+    if (field.validationPattern && value !== undefined && value !== null && value !== '') {
+      const regex = new RegExp(field.validationPattern)
+      if (!regex.test(String(value))) {
+        ElMessage.error(field.validationMessage ?? `Invalid ${field.label.toLowerCase()}`)
+        return false
+      }
+    }
+  }
+
+  return true
+}
+
+async function loadExtraFieldValues(userId: string) {
+  extraFields.value = {}
+
+  for (const field of activeExtraFields.value) {
+    if (!field.loadValueEndpoint) continue
+
+    const endpoint = field.loadValueEndpoint.replaceAll('{userId}', userId)
+    const response = await authApi.get(endpoint)
+    const payload = response.data
+    const value = field.valuePath
+      ? field.valuePath.split('.').reduce<any>((current, key) => current?.[key], payload)
+      : payload
+
+    if (value !== undefined) {
+      extraFields.value[field.key] = value
+    }
+  }
+}
+
+async function submitExtraFields(userId: string) {
+  for (const field of activeExtraFields.value) {
+    if (!field.apiEndpoint) continue
+
+    const payload = field.payloadPath
+      ? { [field.payloadPath]: extraFields.value[field.key] }
+      : extraFields.value[field.key]
+
+    const endpoint = field.apiEndpoint.replaceAll('{userId}', userId)
+    const method = field.submitMethod ?? 'PUT'
+    if (method === 'PUT') {
+      await authApi.put(endpoint, payload)
+    } else if (method === 'POST') {
+      await authApi.post(endpoint, payload)
+    } else if (method === 'PATCH') {
+      await authApi.patch(endpoint, payload)
+    } else if (method === 'DELETE') {
+      await authApi.delete(endpoint)
+    } else {
+      await authApi.get(endpoint)
+    }
+  }
+}
+
 function openCreateDialog() {
   isEditing.value = false
   editingUserId.value = null
   form.value = { email: '', username: '', displayName: '', password: '', isActive: true }
+  extraFields.value = {}
   dialogVisible.value = true
 }
 
@@ -405,21 +438,27 @@ function openEditDialog(user: User) {
   isEditing.value = true
   editingUserId.value = user.id
   form.value = {
-    email: user.email,
-    username: user.username,
+    email: user.email ?? '',
+    username: user.username ?? '',
     displayName: user.displayName ?? '',
     password: '',
-    isActive: user.isActive,
+    isActive: user.isActive ?? true,
   }
+  extraFields.value = {}
   dialogVisible.value = true
+  loadExtraFieldValues(user.id).catch(() => {})
 }
 
 async function handleSave() {
   const valid = await formRef.value?.validate().catch(() => false)
   if (!valid) return
 
+  const extraValid = await validateExtraFields()
+  if (!extraValid) return
+
   saving.value = true
   try {
+    let savedUser: User | undefined
     if (isEditing.value && editingUserId.value) {
       const updateData: usersApi.UpdateUserRequest = {
         email: form.value.email,
@@ -427,16 +466,19 @@ async function handleSave() {
         displayName: form.value.displayName || undefined,
         isActive: form.value.isActive,
       }
-      await usersApi.updateUser(editingUserId.value, updateData)
+      savedUser = await usersApi.updateUser(editingUserId.value, updateData)
       notificationStore.addNotification('User updated successfully', 'success')
     } else {
-      await usersApi.createUser({
+      savedUser = await usersApi.createUser({
         email: form.value.email,
         username: form.value.username,
         displayName: form.value.displayName || undefined,
         password: form.value.password,
       })
       notificationStore.addNotification('User created successfully', 'success')
+    }
+    if (savedUser?.id) {
+      await submitExtraFields(savedUser.id)
     }
     dialogVisible.value = false
     loadUsers()
@@ -450,9 +492,9 @@ async function handleSave() {
 
 async function toggleActive(user: User) {
   try {
-    await usersApi.updateUser(user.id, { isActive: !user.isActive })
+    await usersApi.updateUser(user.id, { isActive: !(user.isActive ?? true) })
     notificationStore.addNotification(
-      `User ${user.isActive ? 'deactivated' : 'activated'} successfully`,
+      `User ${(user.isActive ?? true) ? 'deactivated' : 'activated'} successfully`,
       'success'
     )
     loadUsers()
@@ -485,15 +527,13 @@ async function loadUsers() {
 }
 
 watch(skip, loadUsers)
+void loadUsers()
+watch(
+  () => route.fullPath,
+  () => loadUsers(),
+  { immediate: true },
+)
 onMounted(() => loadUsers())
-
-function handleSort() {
-  // Future: server-side sorting
-}
-
-function handlePageChange(page: number) {
-  currentPage.value = page
-}
 
 async function handleDelete(row: User) {
   deleting.value = true
@@ -523,8 +563,12 @@ async function handleDelete(row: User) {
   min-width: 180px;
 }
 
-/* ===== Mobile Adjustments ===== */
 @media (max-width: 768px) {
+  .page {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
   .page__header {
     flex-direction: column;
     gap: 12px;
@@ -534,99 +578,16 @@ async function handleDelete(row: User) {
   .users-filters {
     flex-direction: column;
     gap: 8px;
+    width: 100%;
   }
 
   .users-filters__item {
     width: 100%;
     min-width: auto;
   }
-
-  .desktop-table {
-    display: none;
-  }
 }
 
-@media (min-width: 769px) {
-  .mobile-cards {
-    display: none;
-  }
-}
-
-/* ===== Mobile Card View ===== */
-.mobile-cards {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.user-card {
-  border: 1px solid var(--el-border-color-light);
-  border-radius: 8px;
-  padding: 16px;
-  background: var(--el-bg-color);
-}
-
-.user-card__header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.user-card__title {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.user-card__name {
-  font-weight: 500;
-  font-size: 15px;
-}
-
-.user-card__email {
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
-}
-
-.user-card__content {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.user-card__field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.user-card__label {
-  font-size: 11px;
-  color: var(--el-text-color-secondary);
-  text-transform: uppercase;
-}
-
-.user-card__value {
-  font-size: 14px;
-}
-
-.user-card__roles {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-.user-card__actions {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-}
-
-/* Horizontal scroll wrapper for tables on mobile */
-.table-wrapper {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
+.el-card :deep(.el-card__body) {
+  overflow-x: hidden;
 }
 </style>

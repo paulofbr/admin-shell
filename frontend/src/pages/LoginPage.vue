@@ -75,7 +75,7 @@
 
             <div class="auth-form__options">
               <el-checkbox v-model="rememberMe">Remember me</el-checkbox>
-              <el-link type="primary" :underline="false">Forgot password?</el-link>
+              <el-link type="primary">Forgot password?</el-link>
             </div>
 
             <el-form-item>

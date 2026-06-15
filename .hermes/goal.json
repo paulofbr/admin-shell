@@ -1,12 +1,8 @@
 {
-  "id": "admin-shell-v1",
-  "name": "Admin Shell Application",
-  "description": "A modular, extensible administration shell framework built with .NET 8+ ASP.NET Core backend and React SPA frontend, supporting convention-based plugin discovery and lifecycle management.",
-  "version": "1.0.0",
-  "priority": "high",
-  "tags": ["dotnet", "aspnetcore", "react", "plugins", "modular", "admin"],
-  "repository": "https://github.com/paulorocha/admin-shell",
-  "goal_type": "application",
-  "total_phases": 5,
-  "current_phase": 1
+  "id": "admin-shell-net10-scalar",
+  "name": "Migrate Admin Shell to .NET 10 and Scalar",
+  "description": "Migrate all C# projects to net10.0 and replace the legacy Swagger/OpenAPI UI with native OpenAPI + Scalar.",
+  "created_at": "2026-06-14T00:00:00Z",
+  "updated_at": "2026-06-14T00:00:00Z",
+  "status": "completed"
 }

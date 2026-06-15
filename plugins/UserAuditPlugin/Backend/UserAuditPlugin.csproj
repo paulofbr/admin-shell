@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>UserAuditPlugin</RootNamespace>
+    <OutputPath>bin/$(Configuration)/</OutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../../backend/AdminShell.Contracts/AdminShell.Contracts.csproj" />
+    <ProjectReference Include="../../../backend/AdminShell.Core/AdminShell.Core.csproj" />
+    <ProjectReference Include="../../ReportingPlugin/Backend/ReportingPlugin.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\..\frontend\public\plugins\useraudit\**\*" Exclude="**\plugin.json" LogicalName="$(AssemblyName).frontend.%(RecursiveDir)%(Filename)%(Extension)" />
+    <EmbeddedResource Include="..\..\..\frontend\public\plugins\useraudit\plugin.json" LogicalName="$(AssemblyName).plugin.json" />
+  </ItemGroup>
+
+  <Target Name="CopyPluginDependencies" AfterTargets="Build;Publish">
+    <ItemGroup>
+      <PluginDependency Include="$(OutputPath)*.dll" Exclude="$(OutputPath)$(AssemblyName).dll" />
+      <PluginDependency Include="$(OutputPath)*.pdb" Exclude="$(OutputPath)$(AssemblyName).pdb" />
+    </ItemGroup>
+    <MakeDir Directories="$(MSBuildProjectDirectory)/dependencias" />
+    <Copy SourceFiles="@(PluginDependency)" DestinationFolder="$(MSBuildProjectDirectory)/dependencias" SkipUnchangedFiles="true" />
+  </Target>
+
+</Project>

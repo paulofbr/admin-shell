@@ -29,7 +29,17 @@ public class PluginLoaderTests
             var pluginDll = Path.Combine(
                 AppDomain.CurrentDomain.BaseDirectory,
                 "..", "..", "..", "..", "..",
-                "Plugins", "Backend", "ReportingPlugin.dll");
+                "plugins", "ReportingPlugin", "Backend", "bin", "Release", "net10.0", "ReportingPlugin.dll");
+
+            var debugPluginDll = Path.Combine(
+                AppDomain.CurrentDomain.BaseDirectory,
+                "..", "..", "..", "..", "..",
+                "plugins", "ReportingPlugin", "Backend", "bin", "Debug", "net10.0", "ReportingPlugin.dll");
+
+            if (!File.Exists(pluginDll) && File.Exists(debugPluginDll))
+            {
+                pluginDll = debugPluginDll;
+            }
 
             if (File.Exists(pluginDll))
             {
@@ -50,6 +60,41 @@ public class PluginLoaderTests
         finally
         {
             Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
+    public async Task LoadPlugins_FromDirectory_IgnoresObjAndLoadsComponents()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        Directory.CreateDirectory(tempDir);
+        try
+        {
+            var debugPluginDll = Path.Combine(
+                AppDomain.CurrentDomain.BaseDirectory,
+                "..", "..", "..", "..", "..",
+                "plugins", "ReportingPlugin", "Backend", "bin", "Debug", "net10.0", "ReportingPlugin.dll");
+
+            if (!File.Exists(debugPluginDll)) return;
+
+            var objDll = Path.Combine(tempDir, "ReportingPlugin.dll");
+            File.Copy(debugPluginDll, objDll, true);
+
+            var binDll = Path.Combine(tempDir, "bin", "Debug", "net10.0", "ReportingPlugin.dll");
+            Directory.CreateDirectory(Path.GetDirectoryName(binDll)!);
+            File.Copy(debugPluginDll, binDll, true);
+
+            var loader = new global::AdminShell.Infrastructure.PluginSystem.PluginLoader(_logger);
+            await loader.LoadPluginsAsync(tempDir);
+
+            loader.LoadedPlugins.Should().ContainSingle();
+            loader.LoadedPlugins.Single().AssemblyPath.Should().Contain("bin");
+            loader.GetPluginComponents().Should().Contain(component => component is IMenuPlugin);
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+                Directory.Delete(tempDir, true);
         }
     }
 
@@ -94,7 +139,7 @@ public class PluginLoaderTests
             var pluginDll = Path.Combine(
                 AppDomain.CurrentDomain.BaseDirectory,
                 "..", "..", "..", "..", "..",
-                "Plugins", "Backend", "ReportingPlugin.dll");
+                "plugins", "ReportingPlugin", "Backend", "bin", "Release", "net10.0", "ReportingPlugin.dll");
 
             if (!File.Exists(pluginDll)) return; // Skip if no real plugin
 
@@ -122,12 +167,55 @@ public class PluginLoaderTests
     }
 
     [Fact]
+    public async Task LoadPlugin_ManifestDependencies_UsesIdAndVersion()
+    {
+        var pluginDll = Path.Combine(
+            AppDomain.CurrentDomain.BaseDirectory,
+            "..", "..", "..", "..", "..",
+            "plugins", "UserAuditPlugin", "Backend", "bin", "Release", "net10.0", "UserAuditPlugin.dll");
+
+        if (!File.Exists(pluginDll)) return;
+
+        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        Directory.CreateDirectory(tempDir);
+        var backendDir = Path.Combine(tempDir, "backend");
+        Directory.CreateDirectory(backendDir);
+
+        try
+        {
+            foreach (var dll in Directory.GetFiles(Path.GetDirectoryName(pluginDll)!, "*.dll"))
+            {
+                File.Copy(dll, Path.Combine(backendDir, Path.GetFileName(dll)), true);
+            }
+
+            var pluginRoot = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(pluginDll)!, "..", "..", "..", ".."));
+
+            File.Copy(
+                Path.Combine(pluginRoot, "manifest.json"),
+                Path.Combine(tempDir, "manifest.json"),
+                true);
+
+            var loader = new global::AdminShell.Infrastructure.PluginSystem.PluginLoader(_logger);
+            var descriptor = await loader.LoadPluginAsync(Path.Combine(backendDir, "UserAuditPlugin.dll"));
+
+            descriptor.Should().NotBeNull();
+            descriptor!.Dependencies.Should().ContainSingle(dep => dep.PluginId == "reporting");
+            descriptor.Dependencies.Single(dep => dep.PluginId == "reporting").VersionConstraint.Should().Be(">=1.0.0");
+            descriptor.Dependencies.Single(dep => dep.PluginId == "reporting").Version.Should().Be(">=1.0.0");
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
     public async Task LoadPlugin_ValidAssembly_ReturnsDescriptor()
     {
         var pluginDll = Path.Combine(
             AppDomain.CurrentDomain.BaseDirectory,
             "..", "..", "..", "..", "..",
-            "Plugins", "Backend", "ReportingPlugin.dll");
+            "plugins", "ReportingPlugin", "Backend", "bin", "Release", "net10.0", "ReportingPlugin.dll");
 
         if (!File.Exists(pluginDll)) return;
 
@@ -139,6 +227,37 @@ public class PluginLoaderTests
         descriptor.Name.Should().Be("Reporting Plugin");
         descriptor.Version.Should().Be("1.0.0");
         descriptor.Status.Should().Be(PluginStatus.Loaded);
+    }
+
+    [Fact]
+    public async Task LoadPlugin_WithEmbeddedFrontend_ExposesManifestAndAssets()
+    {
+        var pluginDll = Path.Combine(
+            AppDomain.CurrentDomain.BaseDirectory,
+            "..", "..", "..", "..", "..",
+            "plugins", "UserDepartmentPlugin", "Backend", "bin", "Release", "net10.0", "UserDepartmentPlugin.dll");
+
+        if (!File.Exists(pluginDll)) return;
+
+        var loader = new global::AdminShell.Infrastructure.PluginSystem.PluginLoader(_logger);
+        var descriptor = await loader.LoadPluginAsync(pluginDll);
+
+        descriptor.Should().NotBeNull();
+        descriptor!.HasEmbeddedFrontend.Should().BeTrue();
+        descriptor.FrontendManifestResourceName.Should().EndWith("UserDepartmentPlugin.plugin.json");
+
+        var manifest = loader.GetEmbeddedFrontendManifest("user-department");
+        manifest.Should().NotBeNull();
+        manifest!.Id.Should().Be("user-department");
+        manifest.Source.Should().Be("embedded");
+        manifest.Main.Should().Be("index.js");
+
+        var asset = loader.GetEmbeddedFrontendAsset("user-department", "index.js");
+        asset.Should().NotBeNull();
+        asset!.ContentType.Should().Contain("text/javascript");
+        System.Text.Encoding.UTF8.GetString(asset.Content).Should().Contain("User Department Plugin");
+
+        loader.GetEmbeddedFrontendAsset("user-department", "../index.js").Should().BeNull();
     }
 
     [Fact]
@@ -189,7 +308,7 @@ public class PluginLoaderTests
             var pluginDll = Path.Combine(
                 AppDomain.CurrentDomain.BaseDirectory,
                 "..", "..", "..", "..", "..",
-                "Plugins", "Backend", "ReportingPlugin.dll");
+                "plugins", "ReportingPlugin", "Backend", "bin", "Release", "net10.0", "ReportingPlugin.dll");
 
             if (!File.Exists(pluginDll)) return;
 
@@ -220,6 +339,57 @@ public class PluginLoaderTests
     }
 
     [Fact]
+    public async Task PluginExtensionRegistry_ExcludesContributions_FromDisabledPlugin()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        Directory.CreateDirectory(tempDir);
+        try
+        {
+            var pluginDll = Path.Combine(
+                AppDomain.CurrentDomain.BaseDirectory,
+                "..", "..", "..", "..", "..",
+                "plugins", "ReportingPlugin", "Backend", "bin", "Release", "net10.0", "ReportingPlugin.dll");
+
+            if (!File.Exists(pluginDll)) return;
+
+            var pluginDir = Path.GetDirectoryName(pluginDll)!;
+            foreach (var dep in new[] { "ReportingPlugin.dll", "AdminShell.Contracts.dll" })
+            {
+                var src = Path.Combine(pluginDir, dep);
+                if (File.Exists(src))
+                    File.Copy(src, Path.Combine(tempDir, dep));
+            }
+
+            var loader = new global::AdminShell.Infrastructure.PluginSystem.PluginLoader(_logger);
+            await loader.LoadPluginsAsync(tempDir);
+
+            var services = new ServiceCollection();
+            services.AddLogging();
+            loader.InitializePlugins(services, new ConfigurationBuilder().Build());
+
+            var registry = new PluginExtensionRegistry(
+                loader.GetPluginComponents(),
+                NullLogger<PluginExtensionRegistry>.Instance,
+                loader);
+
+            registry.GetMenuItems().Should().Contain(m => m.Id == "reports");
+            registry.GetWidgets().Should().NotBeEmpty();
+
+            var disabled = await loader.DisablePluginAsync("reporting");
+            disabled.Should().BeTrue();
+
+            registry.Refresh();
+
+            registry.GetMenuItems().Should().BeEmpty();
+            registry.GetWidgets().Should().BeEmpty();
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
     public async Task EnableDisablePlugin_NonExistent_ReturnsFalse()
     {
         var loader = new global::AdminShell.Infrastructure.PluginSystem.PluginLoader(_logger);
@@ -239,7 +409,7 @@ public class PluginLoaderTests
             var pluginDll = Path.Combine(
                 AppDomain.CurrentDomain.BaseDirectory,
                 "..", "..", "..", "..", "..",
-                "Plugins", "Backend", "ReportingPlugin.dll");
+                "plugins", "ReportingPlugin", "Backend", "bin", "Release", "net10.0", "ReportingPlugin.dll");
 
             if (!File.Exists(pluginDll)) return;
 
@@ -278,7 +448,7 @@ public class PluginLoaderTests
             var pluginDll = Path.Combine(
                 AppDomain.CurrentDomain.BaseDirectory,
                 "..", "..", "..", "..", "..",
-                "Plugins", "Backend", "ReportingPlugin.dll");
+                "plugins", "ReportingPlugin", "Backend", "bin", "Release", "net10.0", "ReportingPlugin.dll");
 
             if (!File.Exists(pluginDll)) return;
 

@@ -43,6 +43,7 @@
               <div class="global-search__item-content">
                 <div class="global-search__item-title">{{ item.title }}</div>
                 <div v-if="item.description" class="global-search__item-desc">{{ item.description }}</div>
+                <div v-if="item.providerName" class="global-search__item-provider">{{ item.providerName }}</div>
               </div>
               <el-tag size="small" type="info" effect="plain">{{ item.score }}</el-tag>
             </div>
@@ -76,13 +77,15 @@ const hoveredIndex = ref(-1)
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
 let searchAbortController: AbortController | null = null
 
-interface SearchResultItem {
+export interface SearchResultItem {
   title: string
   description?: string
   url: string
   category: string
   icon?: string
   score: number
+  providerId?: string
+  providerName?: string
 }
 
 const placeholder = computed(() => {
@@ -243,11 +246,18 @@ onUnmounted(() => {
 .global-search {
   position: relative;
   width: 320px;
+  min-width: 0;
 }
 
 .global-search__input {
   --el-input-bg-color: var(--el-fill-color-light);
   --el-input-border-color: transparent;
+}
+
+@media (max-width: 768px) {
+  .global-search {
+    width: 100%;
+  }
 }
 
 .global-search__input:focus-within {
@@ -336,6 +346,11 @@ onUnmounted(() => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.global-search__item-provider {
+  font-size: 10px;
+  color: var(--el-text-color-placeholder);
 }
 
 .global-search__footer {

@@ -1,6 +1,10 @@
 // User Audit Plugin — Frontend
 // Adds audit log page
 
+export const permissions = {
+  auditRead: ['audit:read'],
+}
+
 export default class UserAuditPlugin {
   constructor() {
     this.id = 'useraudit';
@@ -10,6 +14,7 @@ export default class UserAuditPlugin {
   }
 
   async initialize(container, services) {
+    this._services = services;
     const eventBus = services.eventBus;
 
     this._unsubscribers.push(
@@ -25,8 +30,9 @@ export default class UserAuditPlugin {
 
   async _renderAuditPage(container) {
     try {
-      const res = await fetch('/api/plugins/useraudit/audit');
-      const entries = res.ok ? await res.json() : [];
+      const api = this._services?.api;
+      const res = await api.get('/audit');
+      const entries = res.ok ? res.data : [];
 
       container.innerHTML = `
         <div style="padding: 24px">

@@ -1,8 +1,0 @@
-{
-  "id": "user-department",
-  "name": "User Department Plugin",
-  "version": "1.0.0",
-  "description": "Adds department management and filtering to the users grid",
-  "dependencies": {},
-  "permissions": ["users:read", "users:department"]
-}

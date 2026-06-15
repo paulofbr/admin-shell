@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { authApi } from '@/services/api'
+import * as extensionsApi from '@/api/extensions'
 import type { MenuItem } from '@/types'
 
 export interface WidgetDescriptor {
@@ -33,11 +33,17 @@ export interface FormFieldDescriptor {
   required: boolean
   defaultValue?: string
   placeholder?: string
+  rows?: number
   description?: string
   validationPattern?: string
   validationMessage?: string
   options?: { value: string; label: string; group?: string }[]
   order: number
+  apiEndpoint?: string
+  loadValueEndpoint?: string
+  valuePath?: string
+  submitMethod?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
+  payloadPath?: string
 }
 
 export interface HeaderActionDescriptor {
@@ -89,17 +95,6 @@ export interface PageResourceDescriptor {
   src: string
   includePages: string[]
   position: string
-}
-
-interface ExtensionsSnapshot {
-  widgets: WidgetDescriptor[]
-  tabs: TabDescriptor[]
-  formFields: FormFieldDescriptor[]
-  headerActions: HeaderActionDescriptor[]
-  reports: ReportDescriptor[]
-  sidebarSections: SidebarSectionDescriptor[]
-  menuItems: MenuItem[]
-  pageResources: PageResourceDescriptor[]
 }
 
 /**
@@ -185,17 +180,16 @@ export const useExtensionStore = defineStore('extensions', () => {
     if (loaded.value) return
     loading.value = true
     try {
-      const res = await authApi.get('/api/extensions')
-      if (res && res.data) {
-        const snapshot = res.data as ExtensionsSnapshot
-        widgets.value = snapshot.widgets || []
-        tabs.value = snapshot.tabs || []
-        formFields.value = snapshot.formFields || []
-        headerActions.value = snapshot.headerActions || []
-        reports.value = snapshot.reports || []
-        sidebarSections.value = snapshot.sidebarSections || []
-        menuItems.value = snapshot.menuItems || []
-        pageResources.value = snapshot.pageResources || []
+      const snapshot = await extensionsApi.getExtensions()
+      if (snapshot) {
+        widgets.value = snapshot.widgets as unknown as WidgetDescriptor[]
+        tabs.value = snapshot.tabs as unknown as TabDescriptor[]
+        formFields.value = snapshot.formFields as unknown as FormFieldDescriptor[]
+        headerActions.value = snapshot.headerActions as unknown as HeaderActionDescriptor[]
+        reports.value = snapshot.reports as unknown as ReportDescriptor[]
+        sidebarSections.value = snapshot.sidebarSections as unknown as SidebarSectionDescriptor[]
+        menuItems.value = snapshot.menuItems as unknown as MenuItem[]
+        pageResources.value = snapshot.pageResources as unknown as PageResourceDescriptor[]
         loaded.value = true
       }
     } catch (e) {

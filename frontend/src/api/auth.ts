@@ -1,5 +1,13 @@
+import {
+  getAdminShellHostV1,
+  type LoginRequest,
+  type RefreshTokenRequest,
+  type RegisterRequest,
+  type UserDto,
+} from '@/generated/api/adminshell'
 import type { User } from '@/types'
-import client from './client'
+
+const api = getAdminShellHostV1()
 
 export interface LoginPayload {
   email: string
@@ -24,11 +32,8 @@ export async function login(
   email: string,
   password: string,
 ): Promise<LoginResult> {
-  const response = await client.post<LoginResult>('/api/auth/login', {
-    email,
-    password,
-  })
-  return response.data
+  const response = await api.postApiAuthLogin({ email, password } satisfies LoginRequest)
+  return response.data as LoginResult
 }
 
 export async function register(
@@ -37,31 +42,23 @@ export async function register(
   password: string,
   displayName?: string,
 ): Promise<LoginResult> {
-  const response = await client.post<LoginResult>('/api/auth/register', {
-    email,
-    username,
-    password,
-    displayName,
-  })
-  return response.data
+  const response = await api.postApiAuthRegister({ email, username, password, displayName: displayName ?? null } satisfies RegisterRequest)
+  return response.data as LoginResult
 }
 
 export async function refresh(
   accessToken: string,
   refreshToken: string,
 ): Promise<LoginResult> {
-  const response = await client.post<LoginResult>('/api/auth/refresh', {
-    accessToken,
-    refreshToken,
-  })
-  return response.data
+  const response = await api.postApiAuthRefresh({ accessToken, refreshToken } satisfies RefreshTokenRequest)
+  return response.data as LoginResult
 }
 
 export async function logout(): Promise<void> {
-  await client.post('/api/auth/logout')
+  await api.postApiAuthLogout()
 }
 
 export async function getMe(): Promise<User> {
-  const response = await client.get<User>('/api/auth/me')
-  return response.data
+  const response = await api.getApiAuthMe()
+  return response.data as UserDto as User
 }

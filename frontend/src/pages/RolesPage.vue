@@ -1,155 +1,128 @@
 <template>
-  <div class="page">
-    <div class="page__header">
-      <div>
-        <h2 class="page__title">Roles &amp; Permissions</h2>
-        <p class="page__subtitle">Manage roles and their permissions</p>
-      </div>
-      <el-button type="primary" :icon="Plus" round @click="openCreateDialog">
+  <ListViewer title="Roles & Permissions" subtitle="Manage roles and their permissions">
+    <template #actions>
+      <el-button type="primary" round @click="openCreateDialog">
         Add Role
       </el-button>
-    </div>
+    </template>
+    
+    <ResponsiveGrid
+      :data="roles as unknown as GridRow[]"
+      :columns="gridColumns as unknown as GridColumn[]"
+      :loading="loading"
+      :edit-mode="'popup'"
+      empty-text="No roles"
+    >
+      <template #cell-role="{ row }">
+        <div style="font-weight: 500">{{ (row as unknown as rolesApi.Role).name }}</div>
+      </template>
 
-    <el-card shadow="never">
-      <div class="table-wrapper">
-        <el-table v-loading="loading" :data="roles" stripe style="width: 100%" class="desktop-table">
-          <!-- Desktop Table View -->
-          <el-table-column label="Role" min-width="200">
-            <template #default="{ row }">
-              <div style="font-weight: 500">{{ row.name }}</div>
-            </template>
-          </el-table-column>
-          <el-table-column prop="description" label="Description" min-width="250">
-            <template #default="{ row }">
-              <span v-if="row.description">{{ row.description }}</span>
-              <span v-else style="color: var(--el-text-color-placeholder)">—</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="Permissions" width="250">
-            <template #default="{ row }">
-              <el-button size="small" text type="primary" @click="managePermissions(row)">
-                Manage ({{ permissionCounts.get(row.id) ?? 0 }})
-              </el-button>
-            </template>
-          </el-table-column>
-          <el-table-column label="Created" width="140">
-            <template #default="{ row }">
-              <span style="font-size: 13px; color: var(--el-text-color-secondary)">
-                {{ new Date(row.createdAt).toLocaleDateString() }}
-              </span>
-            </template>
-          </el-table-column>
-          <el-table-column label="Actions" width="140" fixed="right">
-            <template #default="{ row }">
-              <el-button type="primary" size="small" text @click="openEditDialog(row)">Edit</el-button>
-              <el-popconfirm
-                title="Delete this role?"
-                confirm-button-text="Delete"
-                confirm-button-type="danger"
-                @confirm="handleDelete(row)"
-              >
-                <template #reference>
-                  <el-button :disabled="row.name === 'Admin'" type="danger" size="small" text>Delete</el-button>
-                </template>
-              </el-popconfirm>
-            </template>
-          </el-table-column>
-        </el-table>
+      <template #cell-description="{ row }">
+        <span v-if="(row as unknown as rolesApi.Role).description">
+          {{ (row as unknown as rolesApi.Role).description }}
+        </span>
+        <span v-else style="color: var(--el-text-color-placeholder)">—</span>
+      </template>
 
-        <!-- Mobile Card View -->
-        <div v-if="roles.length > 0" class="mobile-cards">
-          <div v-for="role in roles" :key="role.id" class="role-card">
-            <div class="role-card__header">
-              <div>
-                <span class="role-card__name">{{ role.name }}</span>
-                <span v-if="role.description" class="role-card__description">{{ role.description }}</span>
-              </div>
-            </div>
-            <div class="role-card__content">
-              <div class="role-card__field">
-                <span class="role-card__label">Permissions</span>
-                <span class="role-card__value">
-                  <el-button size="small" text type="primary" @click="managePermissions(role)">
-                    Manage ({{ permissionCounts.get(role.id) ?? 0 }})
-                  </el-button>
-                </span>
-              </div>
-              <div class="role-card__field">
-                <span class="role-card__label">Created</span>
-                <span class="role-card__value">{{ new Date(role.createdAt).toLocaleDateString() }}</span>
-              </div>
-            </div>
-            <div class="role-card__actions">
-              <el-button type="primary" size="small" @click="openEditDialog(role)">Edit</el-button>
-              <el-popconfirm
-                title="Delete this role?"
-                confirm-button-text="Delete"
-                confirm-button-type="danger"
-                @confirm="handleDelete(role)"
-              >
-                <template #reference>
-                  <el-button :disabled="role.name === 'Admin'" type="danger" size="small">Delete</el-button>
-                </template>
-              </el-popconfirm>
-            </div>
-          </div>
-        </div>
-      </div>
-    </el-card>
-
-    <!-- Create/Edit Dialog -->
-    <el-dialog v-model="dialogVisible" :title="isEditing ? 'Edit Role' : 'Add Role'" width="480" :close-on-click-modal="false">
-      <el-form ref="formRef" :model="form" :rules="formRules" label-position="top" @submit.prevent="handleSave">
-        <el-form-item label="Name" prop="name">
-          <el-input v-model="form.name" placeholder="e.g. Editor" />
-        </el-form-item>
-        <el-form-item label="Description" prop="description">
-          <el-input v-model="form.description" placeholder="Optional description" type="textarea" :rows="2" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="dialogVisible = false">Cancel</el-button>
-        <el-button type="primary" :loading="saving" @click="handleSave">
-          {{ saving ? 'Saving...' : isEditing ? 'Save Changes' : 'Create Role' }}
+      <template #cell-permissions="{ row }">
+        <el-button size="small" text type="primary" @click="managePermissions(row as unknown as rolesApi.Role)">
+          Manage ({{ permissionCounts.get((row as unknown as rolesApi.Role).id) ?? 0 }})
         </el-button>
       </template>
+
+      <template #cell-created="{ row }">
+        <span style="font-size: 13px; color: var(--el-text-color-secondary)">
+          {{ new Date((row as unknown as rolesApi.Role).createdAt).toLocaleDateString() }}
+        </span>
+      </template>
+
+      <template #cell-actions="{ row }">
+        <el-button type="primary" size="small" text @click="openEditDialog(row as unknown as rolesApi.Role)">Edit</el-button>
+        <el-popconfirm
+          title="Delete this role?"
+          confirm-button-text="Delete"
+          confirm-button-type="danger"
+          @confirm="handleDelete(row as unknown as rolesApi.Role)"
+        >
+          <template #reference>
+            <el-button :disabled="(row as unknown as rolesApi.Role).name === 'Admin'" type="danger" size="small" text>Delete</el-button>
+          </template>
+        </el-popconfirm>
+      </template>
+    </ResponsiveGrid>
+  </ListViewer>
+
+  <!-- Create/Edit Dialog -->
+    <el-dialog v-model="dialogVisible" width="480" :close-on-click-modal="false">
+      <EntityEditor
+        :title="isEditing ? 'Edit Role' : 'Add Role'"
+        :save-label="isEditing ? 'Save Changes' : 'Create Role'"
+        :save-loading="saving"
+        :on-save="handleSave"
+        :on-cancel="() => dialogVisible = false"
+      >
+        <el-form ref="formRef" :model="form" :rules="formRules" label-position="top" @submit.prevent="handleSave">
+          <el-form-item label="Name" prop="name">
+            <el-input v-model="form.name" placeholder="e.g. Editor" />
+          </el-form-item>
+          <el-form-item label="Description" prop="description">
+            <el-input v-model="form.description" placeholder="Optional description" type="textarea" :rows="2" />
+          </el-form-item>
+        </el-form>
+      </EntityEditor>
     </el-dialog>
 
-    <!-- Permissions Dialog -->
-    <el-dialog v-model="permsVisible" :title="`Permissions: ${selectedRole?.name ?? ''}`" width="600" :close-on-click-modal="false">
-      <el-checkbox-group v-model="assignedPermIds" v-loading="permsLoading">
-        <div v-for="group in permissionGroups" :key="group.resource" style="margin-bottom: 16px;">
-          <div style="font-weight: 600; margin-bottom: 8px; color: var(--el-text-color-primary); text-transform: capitalize;">
-            {{ group.resource }}
+  <!-- Permissions Dialog -->
+    <el-dialog v-model="permsVisible" width="600" :close-on-click-modal="false">
+      <EntityEditor
+        :title="`Permissions: ${selectedRole?.name ?? ''}`"
+        save-label="Save Permissions"
+        :save-loading="permsSaving"
+        :on-save="savePermissions"
+        :on-cancel="() => permsVisible = false"
+      >
+        <el-checkbox-group v-model="assignedPermIds" v-loading="permsLoading">
+          <div v-for="group in permissionGroups" :key="group.resource" style="margin-bottom: 16px;">
+            <div style="font-weight: 600; margin-bottom: 8px; color: var(--el-text-color-primary); text-transform: capitalize;">
+              {{ group.resource }}
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+              <el-checkbox
+                v-for="perm in group.permissions"
+                :key="perm.id"
+                :label="perm.id"
+                :value="perm.id"
+              >
+                <span :title="perm.code">{{ perm.action }}</span>
+              </el-checkbox>
+            </div>
           </div>
-          <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-            <el-checkbox
-              v-for="perm in group.permissions"
-              :key="perm.id"
-              :label="perm.id"
-              :value="perm.id"
-            >
-              <span :title="perm.code">{{ perm.action }}</span>
-            </el-checkbox>
-          </div>
-        </div>
-      </el-checkbox-group>
-      <template #footer>
-        <el-button @click="permsVisible = false">Cancel</el-button>
-        <el-button type="primary" :loading="permsSaving" @click="savePermissions">Save Permissions</el-button>
-      </template>
+        </el-checkbox-group>
+      </EntityEditor>
     </el-dialog>
-  </div>
-</template>
+  </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useNotificationStore } from '@/stores/notificationStore'
+import ListViewer from '@/components/common/ListViewer.vue'
+import EntityEditor from '@/components/common/EntityEditor.vue'
+import ResponsiveGrid, {
+  type GridColumn,
+  type GridRow,
+} from '@/components/common/ResponsiveGrid.vue'
 import * as rolesApi from '@/api/roles'
-import { Plus } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
 
 const notificationStore = useNotificationStore()
+
+const gridColumns: GridColumn<rolesApi.Role>[] = [
+  { id: 'role', label: 'Role', prop: 'name', minWidth: '200' },
+  { id: 'description', label: 'Description', prop: 'description', minWidth: '250' },
+  { id: 'permissions', label: 'Permissions', width: '250' },
+  { id: 'created', label: 'Created', width: '140' },
+  { id: 'actions', label: 'Actions', width: '140', fixed: 'right' },
+]
 
 const roles = ref<rolesApi.Role[]>([])
 const loading = ref(false)
@@ -297,33 +270,9 @@ onMounted(loadRoles)
 </script>
 
 <style scoped>
-.page { padding: 24px; }
-.page__header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
-.page__title { margin: 0; font-size: 22px; font-weight: 600; color: var(--el-text-color-primary); }
-.page__subtitle { margin: 4px 0 0; font-size: 14px; color: var(--el-text-color-secondary); }
-
-/* ===== Mobile Adjustments ===== */
 @media (max-width: 768px) {
-  .page { padding: 16px; }
-
-  .page__header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-  }
-
   .el-dialog {
     --el-dialog-width: 95% !important;
-  }
-
-  .table-wrapper {
-    overflow-x: hidden;
-  }
-}
-
-@media (min-width: 769px) {
-  .table-wrapper {
-    overflow-x: auto;
   }
 }
 </style>

@@ -300,16 +300,16 @@ Returns the list of loaded plugins and their status.
 
 ---
 
-## Swagger / OpenAPI
+## Scalar / OpenAPI
 
-When running in development mode, Swagger UI is available at:
-
-```
-http://localhost:5000/swagger
-```
-
-The OpenAPI spec is served at:
+The API reference is available at:
 
 ```
-http://localhost:5000/swagger/v1/swagger.json
+http://localhost:5000/scalar
+```
+
+The OpenAPI document is served at:
+
+```
+http://localhost:5000/openapi/v1.json
 ```

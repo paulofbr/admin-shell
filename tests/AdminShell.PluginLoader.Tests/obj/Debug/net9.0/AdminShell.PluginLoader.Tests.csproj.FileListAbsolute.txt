@@ -320,3 +320,7 @@
 /home/paulo/admin-shell/tests/AdminShell.PluginLoader.Tests/obj/Debug/net9.0/AdminShell.PluginLoader.Tests.pdb
 /home/paulo/admin-shell/tests/AdminShell.PluginLoader.Tests/obj/Debug/net9.0/AdminShell.PluginLoader.Tests.genruntimeconfig.cache
 /home/paulo/admin-shell/tests/AdminShell.PluginLoader.Tests/obj/Debug/net9.0/ref/AdminShell.PluginLoader.Tests.dll
+/home/paulo/admin-shell/tests/AdminShell.PluginLoader.Tests/bin/Debug/net9.0/ReportingPlugin.dll
+/home/paulo/admin-shell/tests/AdminShell.PluginLoader.Tests/bin/Debug/net9.0/UserDepartmentPlugin.dll
+/home/paulo/admin-shell/tests/AdminShell.PluginLoader.Tests/bin/Debug/net9.0/ReportingPlugin.pdb
+/home/paulo/admin-shell/tests/AdminShell.PluginLoader.Tests/bin/Debug/net9.0/UserDepartmentPlugin.pdb

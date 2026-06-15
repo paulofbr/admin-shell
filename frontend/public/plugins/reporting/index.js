@@ -1,6 +1,11 @@
 // Reporting Plugin — Frontend
 // Adds a Reports page and event bus integration
 
+export const permissions = {
+  reportsRead: ['reports:read'],
+  reportsCreate: ['reports:create'],
+}
+
 export default class ReportingPlugin {
   constructor() {
     this.id = 'reporting';

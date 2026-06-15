@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>UserDepartmentPlugin</RootNamespace>
+    <OutputPath>bin/$(Configuration)/</OutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../../backend/AdminShell.Contracts/AdminShell.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\..\frontend\public\plugins\user-department\**\*" Exclude="**\plugin.json" LogicalName="$(AssemblyName).frontend.%(RecursiveDir)%(Filename)%(Extension)" />
+    <EmbeddedResource Include="..\..\..\frontend\public\plugins\user-department\plugin.json" LogicalName="$(AssemblyName).plugin.json" />
+  </ItemGroup>
+
+  <Target Name="CopyPluginDependencies" AfterTargets="Build;Publish">
+    <ItemGroup>
+      <PluginDependency Include="$(OutputPath)*.dll" Exclude="$(OutputPath)$(AssemblyName).dll" />
+      <PluginDependency Include="$(OutputPath)*.pdb" Exclude="$(OutputPath)$(AssemblyName).pdb" />
+    </ItemGroup>
+    <MakeDir Directories="$(MSBuildProjectDirectory)/dependencias" />
+    <Copy SourceFiles="@(PluginDependency)" DestinationFolder="$(MSBuildProjectDirectory)/dependencias" SkipUnchangedFiles="true" />
+  </Target>
+
+</Project>

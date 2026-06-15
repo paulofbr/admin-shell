@@ -19,7 +19,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  DOTNET_VERSION: "9.0.x"
+  DOTNET_VERSION: "10.0.x"
   NODE_VERSION: "20.x"
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
@@ -96,8 +96,8 @@ jobs:
 
       - name: Build all backend plugins
         run: |
-          for plugin_dir in Plugins/Backend/*/; do
-            if [ -f "${plugin_dir}*.csproj" ]; then
+          for plugin_dir in plugins/*/Backend/; do
+            if [ -f "${plugin_dir}"*.csproj ]; then
               csproj=$(ls "${plugin_dir}"*.csproj 2>/dev/null | head -1)
               if [ -n "$csproj" ]; then
                 echo "Building plugin: $csproj"
@@ -136,17 +136,17 @@ jobs:
       # ── Pack NuGet packages ─────────────────────────────────────────────
       - name: Pack NuGet packages
         run: |
-          dotnet pack src/AdminShell.Contracts/AdminShell.Contracts.csproj \
+          dotnet pack backend/AdminShell.Contracts/AdminShell.Contracts.csproj \
             --configuration Release \
             -p:Version=${{ steps.version.outputs.VERSION }} \
             --output "${{ runner.temp }}/nuget"
 
-          dotnet pack src/AdminShell.Core/AdminShell.Core.csproj \
+          dotnet pack backend/AdminShell.Core/AdminShell.Core.csproj \
             --configuration Release \
             -p:Version=${{ steps.version.outputs.VERSION }} \
             --output "${{ runner.temp }}/nuget"
 
-          dotnet pack src/AdminShell.Infrastructure/AdminShell.Infrastructure.csproj \
+          dotnet pack backend/AdminShell.Infrastructure/AdminShell.Infrastructure.csproj \
             --configuration Release \
             -p:Version=${{ steps.version.outputs.VERSION }} \
             --output "${{ runner.temp }}/nuget"

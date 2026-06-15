@@ -13,8 +13,8 @@
         </svg>
       </div>
       <div v-if="!isCollapsed" class="sidebar__brand-text">
-        <span class="sidebar__brand-title">Admin Shell</span>
-        <span class="sidebar__brand-subtitle">Management Panel</span>
+        <span class="sidebar__brand-title">{{ applicationName }}</span>
+        <span class="sidebar__brand-subtitle">{{ applicationSubtitle }}</span>
       </div>
     </div>
 
@@ -112,8 +112,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useApplicationStore } from '@/stores/applicationStore'
 import { useExtensionStore } from '@/stores/extensionStore'
 import type { Component } from 'vue'
+import { storeToRefs } from 'pinia'
 import { Grid, User, Connection, Setting, Wallet, ChatDotSquare, Document, Bell, DataAnalysis,
   List, DataBoard, UserFilled, OfficeBuilding, Fold, Expand } from '@element-plus/icons-vue'
 
@@ -129,7 +131,9 @@ defineEmits<{
 
 const route = useRoute()
 const router = useRouter()
+const applicationStore = useApplicationStore()
 const extensionStore = useExtensionStore()
+const { applicationName, applicationSubtitle } = storeToRefs(applicationStore)
 
 const iconMap: Record<string, Component> = {
   grid: Grid,

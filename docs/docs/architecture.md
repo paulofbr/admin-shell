@@ -46,19 +46,29 @@ The plugin system is the most architecturally significant component. It follows 
 ### Discovery Phase
 
 ```
-Plugins/Backend/
+plugins/
 ├── ReportingPlugin/
-│   ├── ReportingPlugin.dll
-│   └── plugin.json
+│   ├── manifest.json
+│   ├── Backend/
+│   │   ├── bin/
+│   │   ├── dependencias/
+│   │   └── ReportingPlugin.csproj
+│   └── FrontEnd/
 ├── UserAuditPlugin/
-│   ├── UserAuditPlugin.dll
-│   └── plugin.json
-└── plugin.json          ← Optional global config
+│   ├── manifest.json
+│   ├── Backend/
+│   │   └── UserAuditPlugin.csproj
+│   └── FrontEnd/
+└── OrderCreationPlugin/
+    ├── manifest.json
+    ├── Backend/
+    │   └── OrderCreationPlugin.csproj
+    └── FrontEnd/
 ```
 
 1. `PluginLoader` scans the configured plugins directory
 2. Each subdirectory containing `.dll` files is a candidate plugin
-3. `plugin.json` is read for metadata (ID, version, dependencies, permissions)
+3. `manifest.json` is read for metadata (ID, version, dependencies)
 4. Assemblies are loaded into a custom `AssemblyLoadContext` for isolation
 
 ### Dependency Resolution
@@ -76,10 +86,19 @@ Plugins/Backend/
       └──────────────┘
 ```
 
-Dependencies are declared in two ways:
+Dependencies are declared only in the manifest:
 
-1. **Assembly attribute:** `[assembly: PluginDependency(typeof(OtherPlugin), ">= 1.0.0")]`
-2. **Manifest file:** `plugin.json` → `dependencies` field
+```json
+{
+  "id": "useraudit",
+  "dependencies": [
+    {
+      "id": "reporting",
+      "version": ">= 1.0.0"
+    }
+  ]
+}
+```
 
 The loader uses **topological sorting** (Kahn's algorithm) to determine initialization order. Circular dependencies are detected and reported as errors.
 
@@ -214,7 +233,7 @@ Permissions are string-based and follow the convention `{resource}:{action}`:
 
 ## Frontend Architecture
 
-```
+```text
 frontend/
 ├── src/
 │   ├── core/
@@ -224,18 +243,33 @@ frontend/
 │   ├── components/
 │   │   ├── common/          ← DataTable, Modal, etc.
 │   │   └── dashboard/       ← Dashboard layout
-│   ├── pages/               ← Route pages
+│   ├── pages/               ← Route pages (.vue)
 │   │   ├── auth/            ← Login page
 │   │   ├── dashboard/       ← Main dashboard
 │   │   └── users/           ← User management
-│   ├── hooks/               ← Custom React hooks
-│   ├── stores/              ← Zustand stores
+│   ├── composables/         ← Vue composables
+│   ├── stores/              ← Pinia stores
 │   └── types/               ← TypeScript interfaces
+```
+
+### Plugin Frontend Convention
+
+Plugin frontend packages are built by the plugin author and deployed under `frontend/`.
+
+- New pages/components: use Vue SFCs (`.vue`).
+- Non-UI code: use TypeScript (`.ts`), e.g. services, types, permissions, composables.
+- Entry file: `index.js` or compiled bundle produced from the plugin frontend build.
+- Permissions stay outside the manifest and are exported by the frontend entry:
+
+```ts
+export const permissions = {
+  reportsRead: ['reports:read'],
+}
 ```
 
 ### State Management
 
-Zustand is used for client-side state:
+Pinia is used for client-side state.
 
 ```typescript
 interface AuthState {
@@ -308,7 +342,7 @@ Controllers ──────────────────────�
 Health Checks ──────────────────────── app.MapHealthChecks("/api/health")
   │
   ▼
-Plugins ────────────────────────────── Plugin loader (runtime)
+plugins/ ───────────────────────────── Plugin loader (runtime)
   │
   ▼
 Response

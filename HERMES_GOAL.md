@@ -10,13 +10,13 @@ Criar uma **shell de administração completa e extensível** que serve como bas
 
 | Camada | Tecnologia |
 |--------|-----------|
-| **Backend** | .NET 8+ ASP.NET Core Web API (Clean Architecture) |
-| **ORM** | Entity Framework Core 8+ |
-| **Database** | PostgreSQL (principal) / SQLite (dev) |
-| **Frontend** | React 18+ com TypeScript |
-| **State** | Zustand ou Redux Toolkit |
-| **UI Kit** | Radix UI + Tailwind CSS |
-| **Roteamento** | React Router v7 |
+| **Backend** | .NET 10+ ASP.NET Core Web API (Clean Architecture) |
+| **ORM** | Dapper + Microsoft.Data.SqlClient em produção |
+| **Database** | SQL Server produção / SQLite dev |
+| **Frontend** | Vue 3+ com TypeScript |
+| **State** | Pinia |
+| **UI Kit** | Element Plus |
+| **Roteamento** | Vue Router 4 |
 | **Testes** | xUnit (backend) + Vitest (frontend) |
 | **Packaging** | NuGet (backend) + npm (frontend) |
 
@@ -31,12 +31,12 @@ Criar uma **shell de administração completa e extensível** que serve como bas
 **Estrutura de projetos:**
 ```
 admin-shell/
-├── src/
+├── backend/
 │   ├── AdminShell.Host/                    ← Web API (ponto de entrada)
 │   ├── AdminShell.Contracts/               ← Interfaces e contratos (partilhado)
 │   ├── AdminShell.Core/                    ← Lógica de domínio
 │   ├── AdminShell.Infrastructure/          ← Acesso a dados, serviços externos
-│   └── AdminShell.Web/                     ← SPA React (opcional dentro do Host)
+│   └── frontend/                           ← SPA Vue 3 (opcional dentro do Host)
 ├── plugins/
 │   ├── auth/                               ← Plugin de autenticação base
 │   └── user-management/                    ← Plugin de gestão de utilizadores
@@ -50,8 +50,8 @@ admin-shell/
 - Clean Architecture com 4 layers (Presentation, Application, Domain, Infrastructure)
 - Autenticação JWT com refresh tokens
 - Gestão de utilizadores (CRUD completo com roles)
-- Base de dados PostgreSQL + EF Core Migrations
-- Swagger/OpenAPI para documentação da API
+- Base de dados SQL Server produção + SQLite dev
+- Scalar/OpenAPI para documentação da API
 - Logging estruturado com Serilog
 - Health checks (aplicação, base de dados)
 - Rate limiting básico
@@ -59,7 +59,7 @@ admin-shell/
 **Entregáveis:**
 1. Solução compilável com `dotnet build`
 2. API com `GET /api/health` e `POST /api/auth/login`
-3. Página de login da SPA React
+3. Página de login da SPA Vue
 4. Layout base da shell com sidebar e header
 5. Testes unitários para domínio e infraestrutura
 
@@ -115,8 +115,8 @@ public interface IMenuPlugin : IAdminShellPlugin
 
 **Sistema de Descoberta (sem MEF):**
 - Scanner de assemblies por implementações de `IAdminShellPlugin`
-- Ficheiro `plugin.json` em cada pasta de plugin com metadados
-- Suporte a dependências entre plugins (`[PluginDependency]` assembly attribute)
+- Ficheiro `manifest.json` em cada pacote de plugin com metadados no formato novo
+- Dependências entre plugins declaradas em `dependencies[]` com `id` e `version`
 - Ordenação topológica para resolver dependências
 - Ciclos de dependência detectados e reportados ao iniciar
 
@@ -140,12 +140,12 @@ public interface IEventBus
 
 ### 🟠 Fase 3 — Sistema de Plugins Frontend
 
-**Objetivo:** SPA React extensível que carrega plugins frontend dinamicamente.
+**Objetivo:** SPA Vue 3 extensível que carrega plugins frontend dinamicamente.
 
 **Arquitetura Frontend:**
 ```
 AdminShell.Web/
-├── src/
+├── backend/
 │   ├── core/                   ← Código base da shell
 │   │   ├── layout/             ← Layout (sidebar, header, content)
 │   │   ├── services/           ← Serviços base
@@ -177,40 +177,40 @@ interface PluginServices {
 }
 ```
 
-**Manifest do Plugin Frontend (`plugin.json`):**
+**Manifesto do pacote (`manifest.json`):**
 ```json
 {
-  "id": "com.admin-shell.reporting",
+  "schemaVersion": 1,
+  "id": "reporting",
   "name": "Reporting Plugin",
   "version": "1.2.0",
-  "main": "dist/main.js",
-  "styles": ["dist/styles.css"],
-  "dependencies": {
-    "@admin-shell/core": "^1.0.0",
-    "com.admin-shell.auth": ">=1.0.0"
-  },
-  "permissions": ["reports:read", "reports:create"],
-  "ui": {
-    "menuItems": [
-      { "path": "/reports", "title": "Reports", "icon": "chart-bar", "order": 100 }
-    ],
-    "widgets": [
-      { "component": "ReportingWidget", "zone": "dashboard", "order": 10 }
-    ]
-  }
+  "description": "Plugin de reporting.",
+  "dependencies": [
+    {
+      "id": "auth",
+      "version": ">=1.0.0"
+    }
+  ]
 }
 ```
 
+**Frontend do plugin:**
+
+- páginas/componentes novos: Vue SFCs (`.vue`);
+- código não visual: TypeScript (`.ts`);
+- entry compilada/runtime: `frontend/index.js`;
+- permissões fora do manifesto, exportadas pelo frontend entry.
+
 **Sistema de Composição de UI:**
 - **Menu:** Plugins adicionam itens de menu hierárquicos com base em permissões
-- **Widgets:** Plugins registam componentes React que aparecem no dashboard
+- **Widgets:** Plugins registam componentes Vue que aparecem no dashboard
 - **Slots:** Pontos de extensão em páginas existentes (`<PluginSlot name="user-profile-actions" />`)
 - **Zonas:** Áreas predefinidas (header, sidebar, footer, main) onde plugins podem contribuir
 
 **Entregáveis:**
 1. `PluginLoader` — carrega JS/CSS dinamicamente com lazy loading
 2. `PluginRegistry` — gestão de plugins frontend registados
-3. `PluginSlot` / `PluginZone` — componentes React para composição de UI
+3. `PluginSlot` / `PluginZone` — componentes Vue para composição de UI
 4. Sistema de isolamento (CSS scoped + sandbox de iframe)
 5. Plugin de exemplo frontend (Dashboard Widget + Página de Reports)
 
@@ -270,7 +270,7 @@ interface PluginServices {
 AdminShell.Core          ← Domínio base
 AdminShell.Contracts     ← Contratos para plugins
 AdminShell.Infrastructure ← Implementações base
-AdminShell.Web.Core      ← Componentes React base
+AdminShell.Web.Core      ← Componentes Vue base
 AdminShell.Templates     ← Project templates (dotnet new)
 ```
 
@@ -334,17 +334,18 @@ MyPlugin/
 ├── backend/
 │   ├── MyPlugin.csproj
 │   ├── Plugin.cs                          ← Implementa IAdminShellPlugin
-│   ├── PluginDependencies.cs              ← Assembly attributes
 │   ├── Controllers/
 │   ├── Services/
 │   └── Data/
 ├── frontend/
 │   ├── package.json
-│   ├── plugin.json
-│   ├── src/
-│   │   ├── main.ts
-│   │   ├── components/
-│   │   └── styles/
+│   ├── backend/
+│   │   ├── index.ts
+│   │   ├── permissions.ts
+│   │   ├── pages/
+│   │   │   └── Page.vue
+│   │   ├── services/
+│   │   └── types/
 │   └── vite.config.ts
 ├── tests/
 ├── README.md
@@ -379,7 +380,7 @@ MyPlugin/
 
 ```
 admin-shell/
-├── src/
+├── backend/
 │   ├── AdminShell.Host/
 │   ├── AdminShell.Contracts/
 │   ├── AdminShell.Core/
@@ -389,7 +390,7 @@ admin-shell/
 │   ├── auth/
 │   │   ├── backend/
 │   │   ├── frontend/
-│   │   └── plugin.json
+│   │   └── manifest.json
 │   ├── user-management/
 │   ├── reporting/
 │   └── ...

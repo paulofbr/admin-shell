@@ -52,11 +52,11 @@ public class PermissionRepositoryTests
             if (resourceCmp == 0)
             {
                 string.Compare(prev.Action, curr.Action, StringComparison.Ordinal)
-                    .Should().BeLessOrEqualTo(0);
+                    .Should().BeLessThanOrEqualTo(0);
             }
             else
             {
-                resourceCmp.Should().BeLessOrEqualTo(0);
+                resourceCmp.Should().BeLessThanOrEqualTo(0);
             }
         }
     }

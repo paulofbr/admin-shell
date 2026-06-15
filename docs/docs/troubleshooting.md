@@ -8,11 +8,11 @@ Common issues, solutions, and frequently asked questions.
 
 ### What is Admin Shell?
 
-Admin Shell is an extensible administration shell framework built on ASP.NET Core 9.0 and React 18. It provides a plugin-driven architecture for building enterprise management applications.
+Admin Shell is an extensible administration shell framework built on ASP.NET Core 9.0 and Vue 3. It provides a plugin-driven architecture for building enterprise management applications.
 
 ### How do plugins work?
 
-Plugins are .NET class libraries that implement `IAdminShellPlugin` (and optional derived interfaces). They are discovered from the `Plugins/` directory at startup, ordered by dependency, and loaded via reflection. See the [Plugin Development](plugin-development.md) guide.
+Plugins are .NET class libraries that implement `IAdminShellPlugin` (and optional derived interfaces). They are discovered from the `plugins/` directory at startup, ordered by dependency, and loaded via reflection. See the [Plugin Development](plugin-development.md) guide.
 
 ### Do I need PostgreSQL?
 
@@ -28,11 +28,11 @@ The shell includes JWT authentication out of the box. Configure the `Jwt:Secret`
 
 ### Can plugins have dependencies?
 
-Yes. Use the `[PluginDependency]` assembly attribute or declare dependencies in `plugin.json`. The plugin loader uses topological sorting to initialize plugins in the correct order.
+Yes. Declare dependencies in the plugin manifest only. The manifest must use the new `dependencies[]` array with `id` and `version` for each dependency. The plugin loader uses topological sorting to initialize plugins in the correct order.
 
 ### How do I debug a plugin?
 
-Build the plugin in Debug mode, place the assembly in the `Plugins/` directory, and attach the Visual Studio/Rider debugger to the running `AdminShell.Host` process. Set breakpoints in plugin code.
+Build the plugin in Debug mode, place the assembly in the `plugins/` directory, and attach the Visual Studio/Rider debugger to the running `AdminShell.Host` process. Set breakpoints in plugin code.
 
 ### Can I hot-reload plugins?
 
@@ -48,27 +48,27 @@ The plugin system supports assembly unloading via custom `AssemblyLoadContext`. 
 
 **Checklist:**
 
-1. **Verify the plugin is in the correct directory.** Plugins should be in `Plugins/Backend/<PluginName>/`. The compiled `.dll` should be directly in that directory (not in a subfolder).
+1. **Verify the plugin is in the correct directory.** Plugins should be in `plugins/<PluginName>/Backend/`. The compiled `.dll` should be in `plugins/<PluginName>/Backend/bin/<Configuration>/net10.0/`, backend dependencies should be in `plugins/<PluginName>/Backend/dependencias/`, and `manifest.json` should be in `plugins/<PluginName>/`.
 
-2. **Check plugin.json.** Ensure the file exists, is valid JSON, and has the required `id`, `name`, `version`, and `description` fields.
+2. **Check manifest.json.** Ensure the file exists, is valid JSON, and has the required `id`, `name`, `version`, and `description` fields.
 
 3. **Verify the assembly implements IAdminShellPlugin.** Open the assembly in a decompiler (like ILSpy or dotPeek) and confirm the plugin class implements `IAdminShellPlugin`.
 
 4. **Check for dependency errors.** If your plugin depends on another plugin that failed to load, your plugin will also fail. Check the application logs for dependency resolution errors.
 
-5. **Check target framework.** Ensure the plugin targets `net9.0`. Plugins targeting other frameworks will not load.
+5. **Check target framework.** Ensure the plugin targets `net10.0`. Plugins targeting other frameworks will not load.
 
 ### Build Errors
 
-#### "The framework 'Microsoft.NETCore.App', version '9.0.0' was not found"
+#### "The framework 'Microsoft.NETCore.App', version '10.0.0' was not found"
 
-Install the .NET 9.0 SDK:
+Install the .NET 10.0 SDK:
 
 ```bash
 # Ubuntu/Debian
 wget https://dot.net/v1/dotnet-install.sh
 chmod +x dotnet-install.sh
-./dotnet-install.sh --channel 9.0
+./dotnet-install.sh --channel 10.0
 ```
 
 #### "NU1101: Unable to find package AdminShell.Contracts"
@@ -95,11 +95,11 @@ The `Jwt:Secret` configuration key is missing. Add it to `appsettings.json` or `
 
 #### "Cannot resolve dependency: Plugin 'X' requires 'Y >= 1.0.0'"
 
-The required plugin is missing or has an incompatible version. Ensure the dependency plugin is built and placed in the `Plugins/` directory. Check its `plugin.json` for the correct version.
+The required plugin is missing or has an incompatible version. Ensure the dependency plugin is built and placed in the `plugins/` directory. Check its `manifest.json` for the correct version.
 
 #### "Circular dependency detected between plugins"
 
-Two plugins have mutual dependencies. Review the `[PluginDependency]` attributes and `plugin.json` `dependencies` fields to remove the cycle.
+Two plugins have mutual dependencies. Review the manifest `dependencies[]` fields to remove the cycle.
 
 #### "The type 'X' exists in both 'Y.dll' and 'Z.dll'"
 
@@ -122,7 +122,7 @@ sudo -u postgres psql -c "CREATE DATABASE adminshell;"
 Run migrations manually:
 
 ```bash
-dotnet ef database update --project src/AdminShell.Infrastructure --startup-project src/AdminShell.Host
+dotnet ef database update --project backend/AdminShell.Infrastructure --startup-project backend/AdminShell.Host
 ```
 
 ### Frontend Issues

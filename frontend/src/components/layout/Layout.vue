@@ -9,23 +9,37 @@
     <div class="app-layout__main">
       <Navbar @menu-toggle="sidebarOpen = !sidebarOpen" />
       <main class="app-layout__content">
-        <router-view />
+        <router-view v-slot="{ Component }" :key="renderKey">
+          <component :is="Component" :key="renderKey" />
+        </router-view>
       </main>
     </div>
+    <PageResources />
     <NotificationContainer />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { useExtensionStore } from '@/stores/extensionStore'
 import Sidebar from './Sidebar.vue'
 import Navbar from './Navbar.vue'
 import NotificationContainer from '@/components/common/NotificationContainer.vue'
+import PageResources from '@/components/common/PageResources.vue'
 
+const route = useRoute()
 const extensionStore = useExtensionStore()
 const sidebarOpen = ref(false)
 const sidebarCollapsed = ref(false)
+const renderKey = ref(0)
+
+watch(
+  () => route.fullPath,
+  () => {
+    renderKey.value++
+  },
+)
 
 onMounted(async () => {
   // Load plugin extensions on mount
@@ -57,5 +71,11 @@ onMounted(async () => {
   min-height: calc(100vh - 56px);
   background: var(--el-bg-color);
   overflow-x: hidden;
+}
+
+@media (max-width: 768px) {
+  .app-layout__content {
+    max-width: 100%;
+  }
 }
 </style>

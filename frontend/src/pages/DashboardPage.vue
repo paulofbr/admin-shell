@@ -1,13 +1,23 @@
 <template>
   <div class="dashboard">
-    <h2 class="dashboard__title">Dashboard</h2>
+    <div class="dashboard__header">
+      <div>
+        <h2 class="dashboard__title">Dashboard</h2>
+        <p class="dashboard__subtitle">Overview and key application metrics</p>
+      </div>
+      <AiAssistantButton
+        context-title="Dashboard"
+        context-subtitle="Overview and key application metrics"
+        :context-meta="{ kind: 'dashboard' }"
+      />
+    </div>
 
     <!-- Metrics Cards -->
     <el-row :gutter="16" class="dashboard__metrics">
       <el-col
         v-for="metric in metrics"
         :key="metric.key"
-        :xs="12" :sm="12" :md="6" :lg="6"
+        :xs="24" :sm="12" :md="6" :lg="6"
         class="dashboard__metric-col"
       >
         <el-card shadow="hover" class="metric-card" :class="`metric-card--${metric.color}`" @click="metric.action">
@@ -120,18 +130,7 @@
               <el-tag size="small" type="success">{{ pluginWidgets.length }} active</el-tag>
             </div>
           </template>
-          <div v-if="pluginWidgets.length === 0" class="widget-placeholder">
-            <el-empty description="No plugin widgets contributed" :image-size="60" />
-          </div>
-          <div v-else class="widget-grid">
-            <div v-for="widget in pluginWidgets" :key="widget.id" class="widget-item">
-              <div class="widget-item__title">{{ widget.title }}</div>
-              <div class="widget-item__meta">
-                <el-tag size="small">{{ widget.zone }}</el-tag>
-                <span class="widget-item__size">{{ widget.width }}×{{ widget.height }}</span>
-              </div>
-            </div>
-          </div>
+          <PluginSlot zone="dashboard" />
         </el-card>
       </el-col>
 
@@ -169,8 +168,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { authApi } from '@/services/api'
 import { useExtensionStore } from '@/stores/extensionStore'
+import { getDashboardMetrics } from '@/api/dashboard'
+import PluginSlot from '@/components/plugins/PluginSlot.vue'
+import AiAssistantButton from '@/components/common/AiAssistantButton.vue'
 import {
   User,
   Wallet,
@@ -256,11 +257,35 @@ const pluginWidgets = computed(() => extensionStore.getWidgetsByZone('dashboard'
 async function loadMetrics() {
   loading.value = true
   try {
-    const res = await authApi.get('/api/dashboard/metrics')
-    if (res && res.data) {
-      metricsData.value = res.data
+    const metrics = await getDashboardMetrics()
+    metricsData.value = {
+      users: {
+        total: Number(metrics.users.total),
+        active: Number(metrics.users.active),
+        inactive: Number(metrics.users.inactive),
+        monthlyGrowth: metrics.users.monthlyGrowth.map((point) => ({
+          month: point.month,
+          count: Number(point.count),
+        })),
+      },
+      roles: {
+        total: Number(metrics.roles.total),
+      },
+      plugins: {
+        total: Number(metrics.plugins.total),
+        active: Number(metrics.plugins.active),
+      },
+      audit: {
+        today: Number(metrics.audit.today),
+        loginsToday: Number(metrics.audit.loginsToday),
+        failedLoginsToday: Number(metrics.audit.failedLoginsToday),
+        byAction: metrics.audit.byAction.map((item) => ({
+          action: item.action,
+          count: Number(item.count),
+        })),
+      },
     }
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.warn('Failed to load metrics:', e)
   } finally {
     loading.value = false
@@ -279,11 +304,27 @@ onMounted(() => {
 <style scoped>
 .dashboard {
   padding: 24px;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.dashboard__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
 }
 
 .dashboard__title {
-  margin: 0 0 20px;
+  margin: 0;
   font-size: 20px;
+}
+
+.dashboard__subtitle {
+  margin: 4px 0 0;
+  color: var(--el-text-color-secondary);
+  font-size: 14px;
 }
 
 .dashboard__metrics {
@@ -343,7 +384,8 @@ onMounted(() => {
 .metric-card__info {
   display: flex;
   flex-direction: column;
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .metric-card__value {
@@ -351,6 +393,8 @@ onMounted(() => {
   font-weight: 700;
   line-height: 1.2;
   min-height: 30px;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .metric-card__label {
@@ -389,6 +433,9 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .chart-card__body {
@@ -410,10 +457,13 @@ onMounted(() => {
   gap: 8px;
   height: 180px;
   padding: 0 4px;
+  min-width: 0;
+  overflow-x: hidden;
 }
 
 .growth-chart__bar-wrapper {
-  flex: 1;
+  flex: 1 1 0;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -425,11 +475,15 @@ onMounted(() => {
   font-size: 10px;
   color: var(--el-text-color-secondary);
   margin-top: 6px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .growth-chart__bar-track {
   width: 100%;
+  min-width: 0;
   height: 160px;
   display: flex;
   align-items: flex-end;
@@ -439,6 +493,7 @@ onMounted(() => {
 .growth-chart__bar {
   width: 70%;
   max-width: 40px;
+  min-width: 4px;
   background: linear-gradient(to top, var(--el-color-primary), var(--el-color-primary-light-3));
   border-radius: 4px 4px 0 0;
   transition: height 0.5s ease;
@@ -463,6 +518,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
 }
 
 .activity-stat__icon--success { color: var(--el-color-success); }
@@ -470,8 +526,10 @@ onMounted(() => {
 .activity-stat__icon--warning { color: var(--el-color-warning); }
 
 .activity-stat__label {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
   font-size: 13px;
+  overflow-wrap: anywhere;
 }
 
 .activity-stat__value {
@@ -493,24 +551,32 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
   margin-bottom: 8px;
+  min-width: 0;
 }
 
 .audit-breakdown__action {
   font-size: 11px;
   width: 100px;
+  max-width: 42%;
   flex-shrink: 0;
   color: var(--el-text-color-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .audit-breakdown__item :deep(.el-progress) {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .audit-breakdown__count {
   font-size: 12px;
   font-weight: 600;
   width: 30px;
+  max-width: 18%;
   text-align: right;
+  flex-shrink: 0;
 }
 
 /* Widgets */
@@ -522,6 +588,7 @@ onMounted(() => {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   gap: 8px;
+  min-width: 0;
 }
 
 .widget-item {
@@ -529,6 +596,8 @@ onMounted(() => {
   border: 1px solid var(--el-border-color-light);
   border-radius: 8px;
   transition: border-color 0.15s;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .widget-item:hover {
@@ -545,6 +614,8 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
+  flex-wrap: wrap;
 }
 
 .widget-item__size {
@@ -557,11 +628,21 @@ onMounted(() => {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
+  width: 100%;
+  min-width: 0;
 }
 
 .quick-action-btn {
   width: 100%;
+  min-width: 0;
   justify-content: flex-start;
+  overflow: hidden;
+}
+
+.quick-action-btn :deep(.el-button__text) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .dashboard__widgets {
@@ -571,16 +652,69 @@ onMounted(() => {
 /* ===== Mobile Adjustments ===== */
 @media (max-width: 768px) {
   .dashboard {
-    padding: 12px;
+    padding: 0;
     overflow-x: hidden;
+  }
+
+.dashboard__header {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.dashboard__title {
+  font-size: 20px;
+  margin-bottom: 4px;
+}
+
+  .dashboard__metrics,
+  .dashboard__charts,
+  .dashboard__widgets {
+    width: 100%;
+    max-width: 100%;
   }
 
   .dashboard__metric-col {
     margin-bottom: 12px;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .metric-card,
+  .chart-card {
+    width: 100%;
+    max-width: 100%;
   }
 
   .metric-card :deep(.el-card__body) {
     padding: 16px;
+    gap: 12px;
+  }
+
+  .metric-card__value {
+    font-size: 22px;
+  }
+
+  .chart-card__header {
+    align-items: flex-start;
+  }
+
+  .chart-card__header > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .chart-card__header :deep(.el-tag) {
+    flex-shrink: 0;
+    max-width: 45%;
+    overflow: hidden;
+  }
+
+  .chart-card__header :deep(.el-tag__content) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .growth-chart {
@@ -598,7 +732,27 @@ onMounted(() => {
     max-width: 24px;
   }
 
+  .audit-breakdown__action {
+    width: 86px;
+    max-width: 34%;
+  }
+
+  .audit-breakdown__count {
+    width: 24px;
+    max-width: 14%;
+  }
+
   .quick-actions {
+    width: 100%;
+    grid-template-columns: 1fr;
+  }
+
+  .quick-action-btn {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .widget-grid {
     grid-template-columns: 1fr;
   }
 
@@ -606,11 +760,28 @@ onMounted(() => {
   :deep(.el-row) {
     margin-left: 0 !important;
     margin-right: 0 !important;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  :deep(.el-row.dashboard__metrics) {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
   }
 
   :deep(.el-col) {
     padding-left: 0 !important;
     padding-right: 8px !important;
+    max-width: 100%;
+  }
+
+  :deep(.el-row.dashboard__metrics) .dashboard__metric-col {
+    flex-basis: 100% !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 100% !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
   }
 }
 </style>

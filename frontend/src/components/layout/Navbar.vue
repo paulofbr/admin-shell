@@ -5,7 +5,7 @@
         <el-icon :size="20"><Fold /></el-icon>
       </button>
       <el-breadcrumb separator="/" class="navbar__breadcrumb">
-        <el-breadcrumb-item :to="{ path: '/' }">Admin Shell</el-breadcrumb-item>
+        <el-breadcrumb-item :to="{ path: '/' }">{{ applicationName }}</el-breadcrumb-item>
         <el-breadcrumb-item v-if="route.path !== '/'">
           {{ currentPage }}
         </el-breadcrumb-item>
@@ -80,6 +80,7 @@ import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
 import { useNotificationStore } from '@/stores/notificationStore'
+import { useApplicationStore } from '@/stores/applicationStore'
 import { storeToRefs } from 'pinia'
 import {
   Fold,
@@ -99,10 +100,12 @@ defineEmits<{
 
 const route = useRoute()
 const router = useRouter()
+const applicationStore = useApplicationStore()
 const authStore = useAuthStore()
 const notificationStore = useNotificationStore()
 const { user } = storeToRefs(authStore)
 const { unreadCount: unreadNotifications } = storeToRefs(notificationStore)
+const { applicationName } = storeToRefs(applicationStore)
 const showNotifications = ref(false)
 
 const currentPage = computed(() => {
@@ -136,6 +139,7 @@ function toggleTheme() {
 .navbar {
   display: flex;
   align-items: center;
+  min-width: 0;
   height: var(--navbar-height, 56px);
   padding: 0 16px;
   background: var(--el-bg-color);
@@ -144,6 +148,7 @@ function toggleTheme() {
   position: sticky;
   top: 0;
   z-index: 100;
+  overflow-x: hidden;
 }
 
 .navbar__left {
@@ -151,6 +156,8 @@ function toggleTheme() {
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .navbar__menu-toggle {
@@ -164,6 +171,7 @@ function toggleTheme() {
   color: var(--el-text-color-primary);
   cursor: pointer;
   border-radius: 6px;
+  flex-shrink: 0;
 }
 
 .navbar__menu-toggle:hover {
@@ -175,9 +183,10 @@ function toggleTheme() {
 }
 
 .navbar__center {
-  flex: 1;
+  flex: 1 1 auto;
   display: flex;
   justify-content: center;
+  min-width: 0;
 }
 
 .navbar__right {
@@ -185,6 +194,7 @@ function toggleTheme() {
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
+  min-width: 0;
 }
 
 .navbar__icon-btn {
@@ -261,5 +271,50 @@ function toggleTheme() {
 .navbar__chevron {
   font-size: 12px;
   color: var(--el-text-color-secondary);
+}
+
+@media (max-width: 768px) {
+  .navbar {
+    padding: 0 12px;
+    gap: 8px;
+  }
+
+  .navbar__left {
+    gap: 6px;
+  }
+
+  .navbar__breadcrumb {
+    max-width: calc(100vw - 190px);
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .navbar__center {
+    display: none;
+  }
+
+  .navbar__right {
+    gap: 4px;
+  }
+
+  .navbar__right :deep(.header-actions) {
+    display: none;
+  }
+
+  .navbar__user-info,
+  .navbar__chevron {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .navbar {
+    padding: 0 8px;
+  }
+
+  .navbar__breadcrumb {
+    max-width: calc(100vw - 190px);
+  }
 }
 </style>

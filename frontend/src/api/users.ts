@@ -1,5 +1,13 @@
+import {
+  getAdminShellHostV1,
+  type CreateUserRequest as GeneratedCreateUserRequest,
+  type PagedResultOfUserDto,
+  type UpdateUserRequest as GeneratedUpdateUserRequest,
+  type UserDto,
+} from '@/generated/api/adminshell'
 import type { PaginatedResponse, User } from '@/types'
-import client from './client'
+
+const api = getAdminShellHostV1()
 
 export interface CreateUserRequest {
   email: string
@@ -20,27 +28,35 @@ export async function getUsers(
   take = 10,
   filters?: { email?: string; username?: string; displayName?: string }
 ): Promise<PaginatedResponse<User>> {
-  const response = await client.get<PaginatedResponse<User>>('/api/users', {
-    params: { skip, take, ...filters },
-  })
-  return response.data
+  const response = await api.getApiUsers({ skip, take, ...filters })
+  return response.data as PagedResultOfUserDto as PaginatedResponse<User>
 }
 
 export async function getUserById(id: string): Promise<User> {
-  const response = await client.get<User>(`/api/users/${id}`)
-  return response.data
+  const response = await api.getApiUsersId(id)
+  return response.data as UserDto as User
 }
 
 export async function createUser(data: CreateUserRequest): Promise<User> {
-  const response = await client.post<User>('/api/users', data)
-  return response.data
+  const response = await api.postApiUsers({
+    email: data.email,
+    username: data.username,
+    password: data.password,
+    displayName: data.displayName ?? null,
+  } satisfies GeneratedCreateUserRequest)
+  return response.data as UserDto as User
 }
 
 export async function updateUser(id: string, data: UpdateUserRequest): Promise<User> {
-  const response = await client.put<User>(`/api/users/${id}`, data)
-  return response.data
+  const response = await api.putApiUsersId(id, {
+    email: data.email ?? null,
+    username: data.username ?? null,
+    displayName: data.displayName ?? null,
+    isActive: data.isActive ?? null,
+  } satisfies GeneratedUpdateUserRequest)
+  return response.data as UserDto as User
 }
 
 export async function deleteUser(id: string): Promise<void> {
-  await client.delete(`/api/users/${id}`)
+  await api.deleteApiUsersId(id)
 }

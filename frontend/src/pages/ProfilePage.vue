@@ -65,7 +65,7 @@
         :name="tab.id"
       >
         <el-card shadow="never">
-          <el-empty :description="`${tab.label} — contributed by plugin`" />
+          <PluginTabContent :tab="tab" />
         </el-card>
       </el-tab-pane>
     </el-tabs>
@@ -78,6 +78,7 @@ import { ElMessage } from 'element-plus'
 import { authApi } from '@/services/api'
 import { useAuthStore } from '@/stores/authStore'
 import { useExtensionStore } from '@/stores/extensionStore'
+import PluginTabContent from '@/components/plugins/PluginTabContent.vue'
 
 const authStore = useAuthStore()
 const extensionStore = useExtensionStore()
@@ -201,7 +202,7 @@ onMounted(async () => {
 /* ===== Mobile Adjustments ===== */
 @media (max-width: 768px) {
   .profile-page {
-    padding: 16px;
+    padding: 0;
   }
 }
 

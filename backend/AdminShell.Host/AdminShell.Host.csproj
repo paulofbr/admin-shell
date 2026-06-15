@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>AdminShell.Host</RootNamespace>
+    <GenerateTypeScriptApiClient Condition="'$(GenerateTypeScriptApiClient)' == ''">true</GenerateTypeScriptApiClient>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.9" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.9" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.16.0" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.15.2" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.15.1" />
+    <PackageReference Include="OpenTelemetry.Exporter.Console" Version="1.16.0" />
+    <PackageReference Include="Scalar.AspNetCore" Version="2.16.3" />
+    <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AdminShell.Infrastructure\AdminShell.Infrastructure.csproj" />
+    <ProjectReference Include="..\AdminShell.Core\AdminShell.Core.csproj" />
+    <ProjectReference Include="..\AdminShell.Contracts\AdminShell.Contracts.csproj" />
+  </ItemGroup>
+
+  <Target Name="GenerateTypeScriptApiClient" AfterTargets="Build" Condition="'$(GenerateTypeScriptApiClient)' == 'true' and '$(DesignTimeBuild)' != 'true' and '$(ADMIN_SHELL_SKIP_TS_CLIENT_GEN)' != 'true' and Exists('..\..\frontend\scripts\generate-api-client.sh')">
+    <Exec Command="bash ../../frontend/scripts/generate-api-client.sh" WorkingDirectory="$(MSBuildProjectDirectory)" EnvironmentVariables="CONFIGURATION=$(Configuration)" />
+  </Target>
+
+</Project>

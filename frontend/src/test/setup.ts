@@ -3,7 +3,7 @@ import { vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 
 // Mock fetch
-global.fetch = vi.fn()
+globalThis.fetch = vi.fn()
 
 // Mock localStorage
 Object.defineProperty(window, 'localStorage', {

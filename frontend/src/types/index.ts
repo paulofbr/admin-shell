@@ -59,29 +59,47 @@ export interface PluginDescriptor {
   dependencies: PluginDependencyInfo[];
   loadedAt: string;
   errorMessage: string | null;
+  frontendManifestResourceName?: string | null;
+  hasEmbeddedFrontend?: boolean;
+  frontendBaseUrl?: string | null;
+}
+
+export interface PluginInstallResult {
+  pluginId: string
+  pluginName: string
+  version: string
+  pluginDirectory: string
+  activated: boolean
+  messages: string[]
 }
 
 export interface PluginDependencyInfo {
-  pluginId: string;
-  versionConstraint: string | null;
-  isOptional: boolean;
-  isResolved: boolean;
-  errorMessage: string | null;
+  pluginId: string
+  versionConstraint: string | null
+  version?: string | null
+  isOptional: boolean
+  isResolved: boolean
+  errorMessage: string | null
 }
 
+export interface PluginDependency {
+  id: string
+  version: string
+}
+
+export type PluginPermissions = Record<string, string[]>
+
 export interface PluginManifest {
-  id: string;
-  name: string;
-  version: string;
-  description: string;
-  main: string;
-  styles?: string[];
-  dependencies?: Record<string, string>;
-  permissions?: string[];
-  uiContributions?: {
-    menuItems?: MenuItem[];
-    widgets?: WidgetDescriptor[];
-  };
+  schemaVersion: 1
+  id: string
+  name: string
+  version: string
+  description: string
+  main?: string
+  source?: 'embedded' | 'external'
+  frontendBaseUrl?: string | null
+  styles?: string[]
+  dependencies?: PluginDependency[]
 }
 
 export interface MenuItem {
@@ -152,22 +170,70 @@ export interface ThemeService {
   toggleTheme(): void;
 }
 
+export interface ApplicationConfig {
+  name?: string
+  subtitle?: string
+  icon?: string
+  favicon?: string
+  theme?: 'light' | 'dark'
+}
+
+export interface ApplicationService {
+  configureApplication(config: ApplicationConfig): void
+  resetApplication(): void
+}
+
+export interface PluginApiService {
+  pluginId: string;
+  getUrl(path: string): string;
+  get(path: string, config?: any): Promise<any>;
+  post(path: string, data?: unknown, config?: any): Promise<any>;
+  put(path: string, data?: unknown, config?: any): Promise<any>;
+  patch(path: string, data?: unknown, config?: any): Promise<any>;
+  delete(path: string, config?: any): Promise<any>;
+}
+
+export interface PluginTableColumn {
+  pluginId: string;
+  id: string;
+  label: string;
+  width?: number;
+  filterType?: 'select' | 'text' | 'none';
+  filterOptions?: { label: string; value: string }[];
+  render: (row: Record<string, unknown>) => string;
+}
+
+export interface PluginComponentRegistryService {
+  register(name: string, component: unknown): void;
+  resolve(name: string): unknown;
+}
+
+export interface PluginTableService {
+  registerColumn(tableId: string, column: PluginTableColumn): void;
+}
+
 export interface PluginServices {
-  http: import('axios').AxiosInstance;
+  http: any;
+  api: PluginApiService;
   eventBus: EventBus;
   navigation: NavigationService;
   storage: StorageService;
-  ui: UIService;
+  ui: UIService & {
+    registerTableColumn(tableId: string, column: PluginTableColumn): void;
+  };
+  components: PluginComponentRegistryService;
   auth: AuthService;
   theme: ThemeService;
+  app: ApplicationService;
 }
 
 export interface FrontendPlugin {
-  id: string;
-  name: string;
-  version: string;
-  initialize(container: HTMLElement, services: PluginServices): Promise<void>;
-  dispose(): void;
+  id: string
+  name: string
+  version: string
+  permissions?: PluginPermissions
+  initialize(container: HTMLElement, services: PluginServices): Promise<void>
+  dispose(): void
 }
 
 // Plugin contributions to data tables

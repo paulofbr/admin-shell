@@ -160,7 +160,7 @@ public class RoleRepositoryTests
         for (int i = 1; i < names.Count; i++)
         {
             string.Compare(names[i - 1], names[i], StringComparison.Ordinal)
-                .Should().BeLessOrEqualTo(0,
+                .Should().BeLessThanOrEqualTo(0,
                     $"Expected '{names[i - 1]}' before '{names[i]}'");
         }
 

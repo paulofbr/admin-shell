@@ -1,6 +1,6 @@
 # Admin Shell
 
-> An extensible, modular administration shell built on **ASP.NET Core 9.0** (backend) and **React 18** (frontend), designed as a foundation for enterprise management applications.
+> An extensible, modular administration shell built on **ASP.NET Core 10.0** (backend) and **Vue 3** (frontend), designed as a foundation for enterprise management applications.
 
 ---
 
@@ -19,12 +19,12 @@ Admin Shell provides a **plugin-driven architecture** that allows features to be
 
 | Layer       | Technology                                                 |
 |-------------|------------------------------------------------------------|
-| **Backend** | .NET 9.0, ASP.NET Core Web API, Clean Architecture         |
-| **ORM**     | Entity Framework Core 9.0                                  |
-| **Database**| PostgreSQL (primary), SQLite (development)                 |
-| **Frontend**| React 18, TypeScript, Vite                                 |
-| **State**   | Zustand                                                    |
-| **UI**      | Custom CSS with CSS Modules                                |
+| **Backend** | .NET 10.0, ASP.NET Core Web API, Clean Architecture         |
+| **ORM**     | Dapper + Microsoft.Data.SqlClient em produção                    |
+| **Database**| SQL Server (produção), SQLite (desenvolvimento)                  |
+| **Frontend**| Vue 3, TypeScript, Vite                                          |
+| **State**   | Pinia                                                            |
+| **UI**      | Element Plus                                                     |
 | **Testing** | xUnit, FluentAssertions, NSubstitute (backend)             |
 | **Packaging**| NuGet (backend), npm (frontend)                           |
 
@@ -34,16 +34,16 @@ Admin Shell provides a **plugin-driven architecture** that allows features to be
 
 ```
 admin-shell/
-├── src/                          ← Backend source
+├── backend/                          ← Backend source
 │   ├── AdminShell.Host/          ← Web API entry point
 │   ├── AdminShell.Contracts/     ← Shared interfaces & contracts
 │   ├── AdminShell.Core/          ← Domain logic
 │   └── AdminShell.Infrastructure/← Data access, external services
-├── frontend/                     ← React SPA
+├── frontend/                     ← Vue SPA
 │   ├── src/
 │   │   ├── core/                 ← Layout, routing, auth
 │   │   └── components/           ← Reusable UI components
-├── Plugins/                      ← Backend plugins
+├── plugins/                      ← Backend plugins
 │   └── Backend/                  ← Plugin assemblies
 ├── tests/                        ← Backend test projects
 ├── templates/                    ← dotnet new templates
@@ -55,7 +55,7 @@ admin-shell/
 
 - **Plugin**: Any assembly implementing `IAdminShellPlugin` (or its derived interfaces)
 - **Plugin Loader**: Scans directories, resolves dependencies, and loads plugins at startup
-- **Plugin Descriptor**: Metadata (ID, name, version, dependencies) declared in `plugin.json`
+- **Plugin Descriptor**: Metadata (ID, name, version, dependencies) declared in the plugin manifest
 - **Event Bus**: Pub/sub communication channel between plugins
 
 ---
@@ -80,7 +80,7 @@ npm ci
 npm run build
 
 # Run the application
-cd ../src/AdminShell.Host
+cd ../backend/AdminShell.Host
 dotnet run
 ```
 
@@ -94,8 +94,8 @@ The plugin system is the heart of Admin Shell. To create a new plugin:
 
 1. Use the `adminshell-plugin` dotnet new template
 2. Implement `IAdminShellPlugin` and any optional interfaces
-3. Add a `plugin.json` manifest
-4. Drop the compiled assembly into the `Plugins/` directory
+3. Add a manifest with the new schema
+4. Build the plugin so the assembly lands in `plugins/<PluginName>/Backend/bin/Release/net10.0/`
 
 See the [Plugin Development](plugin-development.md) guide for complete documentation.
 
@@ -109,8 +109,8 @@ Admin Shell is currently in active development. The codebase is functional with:
 - ✅ Dependency resolution with topological sorting
 - ✅ API, Widget, Menu, and Data plugin interfaces
 - ✅ JWT authentication
-- ✅ EF Core with PostgreSQL/SQLite
-- ✅ Frontend SPA with routing and dashboard
+- ✅ SQL Server/SQLite support
+- ✅ Frontend SPA Vue with routing and dashboard
 - ✅ CI/CD pipeline
 - ✅ dotnet new plugin template
 

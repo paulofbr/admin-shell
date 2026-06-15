@@ -6,7 +6,7 @@ This guide covers deploying Admin Shell to various environments.
 
 ## Prerequisites
 
-- .NET 9.0 Runtime
+- .NET 10.0 Runtime
 - PostgreSQL 15+ (production)
 - Reverse proxy (nginx, Caddy, or IIS)
 - SSL certificate (Let's Encrypt recommended)
@@ -19,7 +19,7 @@ This guide covers deploying Admin Shell to various environments.
 
 ```bash
 # Publish the backend as a self-contained deployment
-dotnet publish src/AdminShell.Host/AdminShell.Host.csproj \
+dotnet publish backend/AdminShell.Host/AdminShell.Host.csproj \
     --configuration Release \
     --runtime linux-x64 \
     --self-contained true \
@@ -120,7 +120,7 @@ server {
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
 COPY . .
-RUN dotnet publish src/AdminShell.Host/AdminShell.Host.csproj \
+RUN dotnet publish backend/AdminShell.Host/AdminShell.Host.csproj \
     -c Release -o /app/publish
 
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
@@ -235,13 +235,13 @@ WantedBy=multi-user.target
 ```bash
 # Apply migrations manually (production)
 dotnet ef database update \
-    --project src/AdminShell.Infrastructure \
-    --startup-project src/AdminShell.Host
+    --project backend/AdminShell.Infrastructure \
+    --startup-project backend/AdminShell.Host
 
 # Or generate an SQL script
 dotnet ef migrations script \
-    --project src/AdminShell.Infrastructure \
-    --startup-project src/AdminShell.Host \
+    --project backend/AdminShell.Infrastructure \
+    --startup-project backend/AdminShell.Host \
     --output migrate.sql
 
 # Apply the script

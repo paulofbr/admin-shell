@@ -93,7 +93,7 @@
           <div style="max-width: 500px">
             <el-form label-position="top">
               <el-form-item label="Plugin Directory">
-                <el-input v-model="form.pluginDir" placeholder="../Plugins" />
+                <el-input v-model="form.pluginDir" placeholder="../plugins" />
               </el-form-item>
               <el-form-item>
                 <el-switch v-model="form.autoDiscover" active-text="Auto-discover new plugins" />
@@ -152,7 +152,7 @@ const initial = reactive<SettingsForm>({
   emailOnRegister: true,
   emailOnPluginError: true,
   emailOnHealthChange: true,
-  pluginDir: '../Plugins',
+  pluginDir: '../plugins',
   autoDiscover: true,
   hotReload: true,
 })
@@ -181,7 +181,7 @@ function syncFromStore() {
   initial.emailOnRegister = v('notifications.email.on.register', 'true') === 'true'
   initial.emailOnPluginError = v('notifications.email.on.plugin.error', 'true') === 'true'
   initial.emailOnHealthChange = v('notifications.email.on.health', 'true') === 'true'
-  initial.pluginDir = v('plugins.directory', '../Plugins')
+  initial.pluginDir = v('plugins.directory', '../plugins')
   initial.autoDiscover = v('plugins.auto.discover', 'true') === 'true'
   initial.hotReload = v('plugins.hot.reload', 'true') === 'true'
 

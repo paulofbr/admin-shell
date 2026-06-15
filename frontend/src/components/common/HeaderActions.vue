@@ -1,10 +1,10 @@
 <template>
   <div class="header-actions">
     <template v-for="action in actions" :key="action.id">
-      <!-- Route action -->
       <el-button
         v-if="action.actionType === 'route'"
         :icon="getIcon(action.icon)"
+        :type="getButtonType(action.actionType)"
         size="small"
         class="header-actions__btn"
         @click="router.push(action.actionValue ?? '/')"
@@ -12,10 +12,10 @@
         {{ action.label }}
       </el-button>
 
-      <!-- Modal action -->
       <el-button
         v-else-if="action.actionType === 'modal'"
         :icon="getIcon(action.icon)"
+        :type="getButtonType(action.actionType)"
         size="small"
         class="header-actions__btn"
         @click="openModal(action)"
@@ -23,20 +23,18 @@
         {{ action.label }}
       </el-button>
 
-      <!-- API action -->
       <el-popconfirm
         v-else-if="action.actionType === 'api'"
         :title="`Execute: ${action.label}?`"
         @confirm="callApi(action)"
       >
         <template #reference>
-          <el-button :icon="getIcon(action.icon)" size="small" class="header-actions__btn">
+          <el-button :icon="getIcon(action.icon)" :type="action.actionType" size="small" class="header-actions__btn">
             {{ action.label }}
           </el-button>
         </template>
       </el-popconfirm>
 
-      <!-- Emit event -->
       <el-tooltip
         v-else-if="action.actionType === 'emit'"
         :content="action.label"
@@ -44,12 +42,24 @@
       >
         <el-button
           :icon="getIcon(action.icon)"
+          :type="getButtonType(action.actionType)"
           size="small"
           circle
           class="header-actions__btn"
           @click="emitEvent(action)"
         />
       </el-tooltip>
+
+      <el-button
+        v-else
+        :icon="getIcon(action.icon)"
+        :type="getButtonType(action.actionType)"
+        size="small"
+        class="header-actions__btn"
+        @click="openModal(action)"
+      >
+        {{ action.label }}
+      </el-button>
     </template>
   </div>
 </template>
@@ -71,7 +81,7 @@ const router = useRouter()
 const extensionStore = useExtensionStore()
 
 const actions = computed(() =>
-  extensionStore.getHeaderActions(props.target, props.targetPage)
+  extensionStore.getHeaderActions(props.target, props.targetPage),
 )
 
 const iconMap: Record<string, any> = {
@@ -86,12 +96,16 @@ const iconMap: Record<string, any> = {
 
 function getIcon(name?: string): any {
   if (!name) return undefined
-  const key = name.toLowerCase().replace(/[^a-z]/g, '')
+  const key = name.toLowerCase().replace(/[^a-z0-9]/g, '')
   return iconMap[key] || undefined
 }
 
+function getButtonType(actionType: string) {
+  return actionType === 'primary' ? 'primary' : 'default'
+}
+
 function openModal(action: HeaderActionDescriptor) {
-  ElMessage.info(`Modal: ${action.label} (actionValue: ${action.actionValue})`)
+  ElMessage.info(`Action: ${action.label} (value: ${action.actionValue ?? '-'})`)
 }
 
 async function callApi(action: HeaderActionDescriptor) {
@@ -106,7 +120,7 @@ async function callApi(action: HeaderActionDescriptor) {
 
 function emitEvent(action: HeaderActionDescriptor) {
   window.dispatchEvent(new CustomEvent('plugin-action', {
-    detail: { actionId: action.id, value: action.actionValue }
+    detail: { actionId: action.id, value: action.actionValue },
   }))
   ElMessage.info(`Event emitted: ${action.actionValue}`)
 }

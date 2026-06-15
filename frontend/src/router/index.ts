@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { useAuthStore } from '@/stores/authStore'
+import eventBus from '@/utils/eventBus'
+import { usePluginStore } from '@/stores/pluginStore'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -56,42 +57,23 @@ const router = createRouter({
           name: 'Profile',
           component: () => import('@/pages/ProfilePage.vue'),
         },
-        // Catch plugin section routes to auto-generate pages
         {
-          path: 'departments',
-          name: 'DepartmentOverview',
-          component: () => import('@/pages/plugins/DepartmentOverviewPage.vue'),
+          path: 'orders',
+          name: 'Orders',
+          component: () => import('@/pages/OrdersPage.vue'),
+          meta: { requiresAuth: true, pluginId: 'order-creation' },
         },
         {
-          path: 'departments/members',
-          name: 'DepartmentMembers',
-          component: () => import('@/pages/plugins/DepartmentMembersPage.vue'),
+          path: 'orders/create',
+          name: 'OrderCreate',
+          component: () => import('@/pages/OrderCreatePage.vue'),
+          meta: { requiresAuth: true, pluginId: 'order-creation' },
         },
         {
-          path: 'departments/report',
-          name: 'DepartmentReport',
-          component: () => import('@/pages/plugins/DepartmentReportPage.vue'),
-        },
-        // Catch-all for plugin routes
-        {
-          path: 'reports',
-          name: 'Reports',
-          component: () => import('@/pages/plugins/ReportsPage.vue'),
-        },
-        {
-          path: 'reports/dashboard',
-          name: 'ReportsDashboard',
-          component: () => import('@/pages/plugins/ReportsDashboardPage.vue'),
-        },
-        {
-          path: 'reports/analytics',
-          name: 'ReportsAnalytics',
-          component: () => import('@/pages/plugins/ReportsAnalyticsPage.vue'),
-        },
-        {
-          path: 'reports/create',
-          name: 'ReportsCreate',
-          component: () => import('@/pages/plugins/ReportsCreatePage.vue'),
+          path: 'orders/summary',
+          name: 'OrderSummary',
+          component: () => import('@/pages/OrderSummaryPage.vue'),
+          meta: { requiresAuth: true, pluginId: 'order-creation' },
         },
         {
           path: 'vscode-web',
@@ -103,16 +85,34 @@ const router = createRouter({
   ],
 })
 
-router.beforeEach((to, _from, next) => {
-  const authStore = useAuthStore()
+router.beforeEach(async (to, _from, next) => {
+  // Check localStorage directly - more reliable than Pinia store during initialization
+  const hasToken = !!localStorage.getItem('auth_token')
+  const hasRefresh = !!localStorage.getItem('auth_refresh')
+  const isAuthenticated = hasToken && hasRefresh
 
-  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+  if (to.meta.requiresAuth && !isAuthenticated) {
     next('/login')
-  } else if (to.meta.guest && authStore.isAuthenticated) {
+  } else if (to.meta.guest && isAuthenticated) {
     next('/')
+  } else if (typeof to.meta.pluginId === 'string') {
+    const pluginStore = usePluginStore()
+    await pluginStore.loadPluginManifests().catch((error) => {
+      console.warn('Failed to refresh plugin discovery before route guard:', error)
+    })
+
+    if (!pluginStore.isPluginActive(to.meta.pluginId)) {
+      next('/')
+    } else {
+      next()
+    }
   } else {
     next()
   }
+})
+
+router.afterEach((to) => {
+  eventBus.publish('route:changed', to.path)
 })
 
 export default router
