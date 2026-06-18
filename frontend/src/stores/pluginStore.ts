@@ -1,11 +1,11 @@
 import { defineStore } from 'pinia'
-import eventBus from '@/utils/eventBus'
+import eventBus from '@admin-shell/ui/event-bus'
 import pluginLoader from '@/components/plugins/PluginLoader'
 import type {
   PluginDescriptor,
   PluginManifest,
   TableColumnContrib,
-} from '@/types'
+} from '@admin-shell/ui/types'
 import * as pluginsApi from '@/api/plugins'
 
 interface PluginState {

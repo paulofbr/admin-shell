@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using AdminShell.Contracts;
 using AdminShell.Core.Interfaces;
+using AdminShell.Infrastructure.Data;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -16,16 +17,25 @@ public sealed class PluginInstaller : IPluginInstaller
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private readonly IPluginLoader _pluginLoader;
+    private readonly IPluginExtensionRegistry _extensionRegistry;
+    private readonly IManagedEntitySchemaManager _managedEntitySchemaManager;
+    private readonly IDbConnectionFactory _connectionFactory;
     private readonly IConfiguration _configuration;
     private readonly ILogger<PluginInstaller> _logger;
     private readonly string _pluginsDirectory;
 
     public PluginInstaller(
         IPluginLoader pluginLoader,
+        IPluginExtensionRegistry extensionRegistry,
+        IManagedEntitySchemaManager managedEntitySchemaManager,
+        IDbConnectionFactory connectionFactory,
         IConfiguration configuration,
         ILogger<PluginInstaller> logger)
     {
         _pluginLoader = pluginLoader;
+        _extensionRegistry = extensionRegistry;
+        _managedEntitySchemaManager = managedEntitySchemaManager;
+        _connectionFactory = connectionFactory;
         _configuration = configuration;
         _logger = logger;
         _pluginsDirectory = configuration["Plugins:Directory"] ?? "plugins";
@@ -104,6 +114,11 @@ public sealed class PluginInstaller : IPluginInstaller
             }
 
             await _pluginLoader.LoadPluginsAsync(_pluginsDirectory, ct);
+
+            using var db = _connectionFactory.CreateConnection();
+            db.Open();
+            await _managedEntitySchemaManager.EnsureAsync(db);
+            await _extensionRegistry.ApplyAllMigrationsAsync(db);
 
             var descriptor = _pluginLoader.LoadedPlugins.FirstOrDefault(p =>
                 p.Id.Equals(manifest.PluginId, StringComparison.OrdinalIgnoreCase));

@@ -200,6 +200,7 @@ function onClose() {
 }
 
 function getIconComponent(_icon: string): Component {
+  void _icon
   return { template: `<span></span>` } as Component
 }
 

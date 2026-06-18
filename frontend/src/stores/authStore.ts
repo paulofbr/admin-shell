@@ -1,6 +1,26 @@
 import { defineStore } from 'pinia'
-import type { User } from '@/types'
+import type { User } from '@admin-shell/ui/types'
 import * as authApi from '@/api/auth'
+
+const TOKEN_KEY = 'adminshell-token'
+const REFRESH_TOKEN_KEY = 'adminshell-refresh-token'
+const LEGACY_TOKEN_KEY = 'auth_token'
+const LEGACY_REFRESH_TOKEN_KEY = 'auth_refresh'
+
+function setTokens(accessToken: string, refreshToken: string): void {
+  localStorage.setItem(TOKEN_KEY, accessToken)
+  localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken)
+  localStorage.setItem(LEGACY_TOKEN_KEY, accessToken)
+  localStorage.setItem(LEGACY_REFRESH_TOKEN_KEY, refreshToken)
+}
+
+function clearTokens(): void {
+  localStorage.removeItem(TOKEN_KEY)
+  localStorage.removeItem(REFRESH_TOKEN_KEY)
+  localStorage.removeItem(LEGACY_TOKEN_KEY)
+  localStorage.removeItem(LEGACY_REFRESH_TOKEN_KEY)
+}
+
 
 interface AuthState {
   user: User | null
@@ -21,8 +41,7 @@ export const useAuthStore = defineStore('auth', {
   actions: {
     async login(email: string, password: string) {
       const result = await authApi.login(email, password)
-      localStorage.setItem('auth_token', result.accessToken)
-      localStorage.setItem('auth_refresh', result.refreshToken)
+      setTokens(result.accessToken, result.refreshToken)
 
       let user: User | null = result.user ?? null
       if (!user) {
@@ -50,8 +69,7 @@ export const useAuthStore = defineStore('auth', {
 
     async register(email: string, username: string, password: string, displayName?: string) {
       const result = await authApi.register(email, username, password, displayName)
-      localStorage.setItem('auth_token', result.accessToken)
-      localStorage.setItem('auth_refresh', result.refreshToken)
+      setTokens(result.accessToken, result.refreshToken)
 
       let user: User | null = result.user ?? null
       if (!user) {
@@ -83,8 +101,7 @@ export const useAuthStore = defineStore('auth', {
       } catch {
         // ignore errors on logout
       }
-      localStorage.removeItem('auth_token')
-      localStorage.removeItem('auth_refresh')
+      clearTokens()
       this.user = null
       this.token = null
       this.refreshToken = null
@@ -97,8 +114,9 @@ export const useAuthStore = defineStore('auth', {
     },
 
     async loadFromStorage() {
-      const token = localStorage.getItem('auth_token')
-      const refreshToken = localStorage.getItem('auth_refresh')
+      const token = localStorage.getItem(TOKEN_KEY) ?? localStorage.getItem(LEGACY_TOKEN_KEY)
+      const refreshToken =
+        localStorage.getItem(REFRESH_TOKEN_KEY) ?? localStorage.getItem(LEGACY_REFRESH_TOKEN_KEY)
 
       if (!token || !refreshToken) {
         this.isLoading = false
@@ -115,8 +133,7 @@ export const useAuthStore = defineStore('auth', {
         this.isAuthenticated = true
         this.isLoading = false
       } catch {
-        localStorage.removeItem('auth_token')
-        localStorage.removeItem('auth_refresh')
+        clearTokens()
         this.user = null
         this.token = null
         this.refreshToken = null

@@ -8,6 +8,11 @@ export default defineConfig({
     'process.env.NODE_ENV': JSON.stringify('production'),
   },
   plugins: [vue()],
+  resolve: {
+    alias: {
+      '@admin-shell/ui': resolve(__dirname, '../../../frontend/packages/admin-shell-ui/src'),
+    },
+  },
   build: {
     outDir: 'dist',
     emptyOutDir: true,

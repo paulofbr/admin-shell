@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using AdminShell.Host.Middleware;
+using AdminShell.Host.Services;
 using OpenTelemetry.Trace;
 using Scalar.AspNetCore;
 using Serilog;
@@ -88,6 +89,7 @@ builder.Services.AddCors(options =>
 
 // Add infrastructure layer (Dapper, repositories, services, plugin loader)
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddSingleton<ILogFileReader, SerilogLogFileReader>();
 
 // OpenTelemetry — tracing only
 builder.Services.AddOpenTelemetry()

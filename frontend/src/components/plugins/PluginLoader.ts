@@ -4,11 +4,11 @@ import type {
   FrontendPlugin,
   PluginPermissions,
   PluginServices,
-} from '@/types'
+} from '@admin-shell/ui/types'
 import { authApi } from '@/services/api'
-import eventBus from '@/utils/eventBus'
-import { registerPluginComponent, resolvePluginComponent } from '@/utils/pluginComponentRegistry'
-import { registerPluginServices, unregisterPluginServices } from '@/utils/pluginServices'
+import eventBus from '@admin-shell/ui/event-bus'
+import { registerPluginComponent, resolvePluginComponent } from '@admin-shell/ui/plugin-component-registry'
+import { registerPluginServices, unregisterPluginServices } from '@admin-shell/ui/plugin-services'
 
 function isActivePlugin(status: number | string): boolean {
   return status === 2 || status === 4 || status === 'loaded' || status === 'active'
@@ -168,8 +168,12 @@ class PluginLoader {
           resolve: (name) => resolvePluginComponent(name),
         },
         auth: {
-          getToken: () => localStorage.getItem('auth_token'),
-          isAuthenticated: () => !!localStorage.getItem('auth_token'),
+          getToken: () =>
+            localStorage.getItem('adminshell-token') ?? localStorage.getItem('auth_token'),
+          isAuthenticated: () =>
+            !!(
+              localStorage.getItem('adminshell-token') ?? localStorage.getItem('auth_token')
+            ),
           getUser: () => {
             const userStr = localStorage.getItem('auth_user')
             return userStr ? JSON.parse(userStr) : null

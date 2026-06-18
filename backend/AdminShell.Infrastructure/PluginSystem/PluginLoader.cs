@@ -5,6 +5,7 @@ using AdminShell.Core.Interfaces;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace AdminShell.Infrastructure.PluginSystem;
@@ -14,7 +15,10 @@ public class PluginLoader : IPluginLoader
     private readonly List<PluginDescriptor> _loadedPlugins = new();
     private readonly List<(IAdminShellPlugin Instance, PluginDescriptor Descriptor)> _pluginInstances = new();
     private readonly List<(IPluginComponent Component, string PluginId, Type ComponentType)> _pluginComponents = new();
+    private readonly List<(string PluginId, string AssemblyLocation, IReadOnlyList<Type> EntityTypes)> _conventionalManagedEntityProviders = new();
+    private readonly List<(string PluginId, Type ComponentType)> _conventionalApiComponents = new();
     private readonly HashSet<string> _mappedEndpointKeys = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _initializedAssemblies = new(StringComparer.OrdinalIgnoreCase);
     private readonly ILogger<PluginLoader> _logger;
     private IEventBus? _eventBus;
     private IApplicationBuilder? _applicationBuilder;
@@ -26,6 +30,12 @@ public class PluginLoader : IPluginLoader
 
     public IReadOnlyList<IPluginComponent> GetPluginComponents()
         => _pluginComponents.Select(p => p.Component).ToList().AsReadOnly();
+
+    public IReadOnlyList<IManagedEntityProvider> GetManagedEntityProviders()
+        => _conventionalManagedEntityProviders
+            .Select(provider => new ConventionalManagedEntityProvider(provider.PluginId, provider.EntityTypes))
+            .ToList()
+            .AsReadOnly();
 
     public IReadOnlyList<IWidgetPlugin> GetWidgetPlugins()
         => _pluginComponents.Select(p => p.Component).OfType<IWidgetPlugin>().ToList().AsReadOnly();
@@ -109,6 +119,8 @@ public class PluginLoader : IPluginLoader
         }
 
         DeduplicatePluginComponents();
+        DeduplicateConventionalManagedEntityProviders();
+        DeduplicateConventionalApiComponents();
 
         ResolveDependencies();
         _logger.LogInformation("Loaded {Count} unique plugins", _loadedPlugins.Count);
@@ -154,6 +166,9 @@ public class PluginLoader : IPluginLoader
                     };
 
                     _pluginInstances.Add((instance, descriptor));
+
+                    RegisterConventionalManagedEntityProviders(assembly, instance.Id);
+                    RegisterConventionalApiPlugins(assembly, instance.Id);
 
                     descriptors.Add(descriptor);
                     _logger.LogInformation("Loaded plugin identity: {Name} v{Version}", instance.Name, instance.Version);
@@ -222,6 +237,7 @@ public class PluginLoader : IPluginLoader
                 try
                 {
                     instance.Initialize(services, configuration);
+                    RegisterConventionalServices(services, instance.GetType().Assembly);
 
                     if (queryRegistry is not null && instance is IDataPlugin dataPlugin)
                     {
@@ -299,6 +315,27 @@ public class PluginLoader : IPluginLoader
                     pluginId);
             }
         }
+
+        foreach (var (pluginId, componentType) in _conventionalApiComponents)
+        {
+            if (!IsPluginActive(pluginId)) continue;
+
+            var endpointKey = $"{pluginId}:{componentType.FullName}";
+            if (_mappedEndpointKeys.Contains(endpointKey)) continue;
+
+            try
+            {
+                var apiPlugin = (IApiPlugin)endpoints.ServiceProvider.GetRequiredService(componentType);
+                apiPlugin.MapEndpoints(endpoints);
+                _mappedEndpointKeys.Add(endpointKey);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to map conventional API endpoints for plugin component {ComponentType} of plugin {PluginId}",
+                    componentType.Name,
+                    pluginId);
+            }
+        }
     }
 
     public void RefreshPluginEndpoints()
@@ -343,6 +380,118 @@ public class PluginLoader : IPluginLoader
         }
     }
 
+    private void RegisterConventionalManagedEntityProviders(Assembly assembly, string pluginId)
+    {
+        var managedEntityTypes = assembly.GetTypes()
+            .Where(IsManagedEntityType)
+            .OrderBy(type => type.FullName, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (managedEntityTypes.Length == 0)
+            return;
+
+        _conventionalManagedEntityProviders.Add((pluginId, assembly.Location, managedEntityTypes));
+        _logger.LogDebug("Registered {Count} conventional managed entity types for plugin {PluginId}",
+            managedEntityTypes.Length,
+            pluginId);
+    }
+
+    private void RegisterConventionalApiPlugins(Assembly assembly, string pluginId)
+    {
+        foreach (var apiType in assembly.GetTypes()
+                     .Where(IsConventionalApiPluginType)
+                     .OrderBy(type => type.FullName, StringComparer.OrdinalIgnoreCase))
+        {
+            _conventionalApiComponents.Add((pluginId, apiType));
+            _logger.LogDebug("Registered conventional API plugin type {ComponentType} for plugin {PluginId}",
+                apiType.FullName,
+                pluginId);
+        }
+    }
+
+    private void RegisterConventionalServices(IServiceCollection services, Assembly assembly)
+    {
+        var key = assembly.Location;
+        if (!_initializedAssemblies.Add(key))
+            return;
+
+        foreach (var implementationType in assembly.GetTypes()
+                     .Where(IsConventionalServiceOrRepositoryType)
+                     .OrderBy(type => type.FullName, StringComparer.OrdinalIgnoreCase))
+        {
+            if (typeof(IApiPlugin).IsAssignableFrom(implementationType))
+            {
+                services.AddScoped(implementationType);
+                _logger.LogDebug("Registered conventional API plugin type {ImplementationType}",
+                    implementationType.FullName);
+            }
+
+            foreach (var serviceType in GetConventionalServiceInterfaces(implementationType)
+                         .Where(serviceType => serviceType != typeof(IApiPlugin) && serviceType != typeof(IPluginComponent)))
+            {
+                try
+                {
+                    services.AddScoped(serviceType, implementationType);
+                    _logger.LogDebug("Registered conventional plugin service {ServiceType} -> {ImplementationType}",
+                        serviceType.FullName,
+                        implementationType.FullName);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to register conventional plugin service {ServiceType} -> {ImplementationType}",
+                        serviceType.FullName,
+                        implementationType.FullName);
+                }
+            }
+        }
+    }
+
+    private static bool IsConventionalApiPluginType(Type type)
+        => !type.IsAbstract
+           && !type.IsInterface
+           && typeof(IApiPlugin).IsAssignableFrom(type)
+           && !typeof(IAdminShellPlugin).IsAssignableFrom(type)
+           && !type.IsDefined(typeof(PluginComponentAttribute), inherit: true)
+           && (IsInPluginSubNamespace(type, "Apis") || type.Name.EndsWith("Api", StringComparison.OrdinalIgnoreCase));
+
+    private static bool IsManagedEntityType(Type type)
+        => !type.IsAbstract
+           && !type.IsInterface
+           && type.IsDefined(typeof(ManagedEntityAttribute), inherit: true);
+
+    private static bool IsConventionalServiceOrRepositoryType(Type type)
+        => !type.IsAbstract
+           && !type.IsInterface
+           && !typeof(IAdminShellPlugin).IsAssignableFrom(type)
+           && (IsInPluginSubNamespace(type, "Services")
+               || IsInPluginSubNamespace(type, "Repositories")
+               || IsInPluginSubNamespace(type, "Apis")
+               || type.Name.EndsWith("Service", StringComparison.OrdinalIgnoreCase)
+               || type.Name.EndsWith("Repository", StringComparison.OrdinalIgnoreCase)
+               || type.Name.EndsWith("Api", StringComparison.OrdinalIgnoreCase));
+
+    private static IEnumerable<Type> GetConventionalServiceInterfaces(Type implementationType)
+    {
+        var namespacePrefix = implementationType.Namespace ?? string.Empty;
+        return implementationType.GetInterfaces()
+            .Where(serviceType => serviceType.IsPublic
+                                  && !serviceType.IsGenericTypeDefinition
+                                  && serviceType.Namespace?.StartsWith(namespacePrefix, StringComparison.Ordinal) == true)
+            .DefaultIfEmpty(implementationType)
+            .Distinct()
+            .OrderBy(serviceType => serviceType.FullName, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static bool IsInPluginSubNamespace(Type type, string segment)
+    {
+        var ns = type.Namespace ?? string.Empty;
+        return ns.Split('.', StringSplitOptions.RemoveEmptyEntries)
+            .Any(part => part.Equals(segment, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool HasPublicParameterlessConstructor(Type type)
+        => type.GetConstructor(Type.EmptyTypes) is not null;
+
     private void DeduplicatePluginComponents()
     {
         var activePluginIds = _pluginInstances
@@ -358,6 +507,44 @@ public class PluginLoader : IPluginLoader
             if (!activePluginIds.Contains(pluginId) || !seenComponents.Add(componentKey))
             {
                 _pluginComponents.RemoveAt(i);
+            }
+        }
+    }
+
+    private void DeduplicateConventionalApiComponents()
+    {
+        var activePluginIds = _pluginInstances
+            .Select(p => p.Descriptor.Id)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var seenComponents = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        for (var i = _conventionalApiComponents.Count - 1; i >= 0; i--)
+        {
+            var (pluginId, componentType) = _conventionalApiComponents[i];
+            var componentKey = $"{pluginId}:{componentType.FullName}";
+
+            if (!activePluginIds.Contains(pluginId) || !seenComponents.Add(componentKey))
+            {
+                _conventionalApiComponents.RemoveAt(i);
+            }
+        }
+    }
+
+    private void DeduplicateConventionalManagedEntityProviders()
+    {
+        var activePluginIds = _pluginInstances
+            .Select(p => p.Descriptor.Id)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var seenProviders = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        for (var i = _conventionalManagedEntityProviders.Count - 1; i >= 0; i--)
+        {
+            var (pluginId, assemblyLocation, _) = _conventionalManagedEntityProviders[i];
+            var providerKey = $"{pluginId}:{assemblyLocation}";
+
+            if (!activePluginIds.Contains(pluginId) || !seenProviders.Add(providerKey))
+            {
+                _conventionalManagedEntityProviders.RemoveAt(i);
             }
         }
     }
@@ -746,6 +933,21 @@ public class PluginLoader : IPluginLoader
                 Assembly.LoadFrom(dependency);
             }
         }
+    }
+
+    private sealed class ConventionalManagedEntityProvider : IManagedEntityProvider
+    {
+        private readonly IReadOnlyList<Type> _entityTypes;
+
+        public ConventionalManagedEntityProvider(string pluginId, IReadOnlyList<Type> entityTypes)
+        {
+            PluginId = pluginId;
+            _entityTypes = entityTypes;
+        }
+
+        public string PluginId { get; }
+
+        public IEnumerable<Type> GetManagedEntityTypes() => _entityTypes;
     }
 
     private static bool IsVersionSatisfied(string installedVersion, string? constraint)

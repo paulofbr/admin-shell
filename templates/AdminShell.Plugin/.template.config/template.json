@@ -1,0 +1,56 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "AdminShell",
+  "classifications": ["AdminShell", "Plugin"],
+  "identity": "AdminShell.Plugin",
+  "name": "AdminShell Plugin",
+  "shortName": "adminshell-plugin",
+  "sourceName": "PluginName",
+  "preferNameDirectory": true,
+  "description": "Creates an AdminShell plugin with backend, frontend, managed entity, service, repository, and API scaffolding.",
+  "symbols": {
+    "PluginId": {
+      "type": "parameter",
+      "datatype": "string",
+      "defaultValue": "my-plugin",
+      "description": "Kebab-case plugin id used in manifest, routes, and frontend plugin folder.",
+      "replaces": "plugin-id",
+      "fileRename": "plugin-id"
+    },
+    "PluginTitle": {
+      "type": "parameter",
+      "datatype": "string",
+      "defaultValue": "My Plugin",
+      "description": "Human-readable plugin name.",
+      "replaces": "Plugin Title"
+    },
+    "PluginDescription": {
+      "type": "parameter",
+      "datatype": "string",
+      "defaultValue": "AdminShell plugin scaffold.",
+      "description": "Plugin description.",
+      "replaces": "__PluginDescription__"
+    }
+  },
+  "sources": [
+    {
+      "source": "./",
+      "target": "./",
+      "exclude": [
+        "README.md",
+        ".template.config/**"
+      ]
+    }
+  ],
+  "primaryOutputs": [
+    {
+      "path": "Backend/PluginName.csproj"
+    },
+    {
+      "path": "manifest.json"
+    },
+    {
+      "path": "FrontEnd/public/plugins/plugin-id/plugin.json"
+    }
+  ]
+}

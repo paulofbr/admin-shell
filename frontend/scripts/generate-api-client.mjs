@@ -124,7 +124,7 @@ function splitPluginSpecs(spec) {
 
 function buildOrvalConfig(pluginSpecs, mainSpecPath) {
   const mutator = {
-    path: './src/api/orval-client.ts',
+    path: './packages/admin-shell-ui/src/http-client/orval-mutator.cjs',
     name: 'httpClient',
   }
 
@@ -211,7 +211,7 @@ async function generatePluginFrontendClients(pluginSpecs, frontendRoot, repoRoot
       continue
     }
 
-    const sharedHttpClientPath = relative(pluginFrontendRoot, join(frontendRoot, 'packages/admin-shell-http-client/src/index.ts'))
+    const sharedHttpClientPath = relative(pluginFrontendRoot, join(frontendRoot, 'packages/admin-shell-ui/src/http-client/orval-mutator.cjs'))
 
     const pluginSpecPath = join(openApiRoot, 'plugins', `${pluginId}.json`)
     const pluginGeneratedRoot = join(pluginFrontendRoot, 'src/generated')

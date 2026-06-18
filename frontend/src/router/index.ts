@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import eventBus from '@/utils/eventBus'
+import eventBus from '@admin-shell/ui/event-bus'
 import { usePluginStore } from '@/stores/pluginStore'
 
 const router = createRouter({
@@ -48,6 +48,11 @@ const router = createRouter({
           component: () => import('@/pages/SettingsPage.vue'),
         },
         {
+          path: 'logs',
+          name: 'Logs',
+          component: () => import('@/pages/LogsPage.vue'),
+        },
+        {
           path: 'audit',
           name: 'AuditLog',
           component: () => import('@/pages/AuditLogPage.vue'),
@@ -87,8 +92,10 @@ const router = createRouter({
 
 router.beforeEach(async (to, _from, next) => {
   // Check localStorage directly - more reliable than Pinia store during initialization
-  const hasToken = !!localStorage.getItem('auth_token')
-  const hasRefresh = !!localStorage.getItem('auth_refresh')
+  const hasToken =
+    !!localStorage.getItem('adminshell-token') || !!localStorage.getItem('auth_token')
+  const hasRefresh =
+    !!localStorage.getItem('adminshell-refresh-token') || !!localStorage.getItem('auth_refresh')
   const isAuthenticated = hasToken && hasRefresh
 
   if (to.meta.requiresAuth && !isAuthenticated) {

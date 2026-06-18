@@ -28,7 +28,8 @@ public class UserService : IUserService
             AvatarUrl = u.AvatarUrl,
             IsActive = u.IsActive,
             CreatedAt = u.CreatedAt,
-            Roles = u.Roles.Select(r => new RoleDto { Id = r.Id, Name = r.Name ?? string.Empty }).ToList()
+            Roles = u.Roles.Select(r => new RoleDto { Id = r.Id, Name = r.Name ?? string.Empty }).ToList(),
+            ExtensionFields = u.ExtensionFields
         }).ToList();
 
         return new PagedResult<UserDto>(dtos, total, skip, take);
@@ -48,7 +49,8 @@ public class UserService : IUserService
             AvatarUrl = user.AvatarUrl,
             IsActive = user.IsActive,
             CreatedAt = user.CreatedAt,
-            Roles = user.Roles.Select(r => new RoleDto { Id = r.Id, Name = r.Name ?? string.Empty }).ToList()
+            Roles = user.Roles.Select(r => new RoleDto { Id = r.Id, Name = r.Name ?? string.Empty }).ToList(),
+            ExtensionFields = user.ExtensionFields
         };
     }
 
@@ -71,7 +73,8 @@ public class UserService : IUserService
             IsActive = true,
             CreatedBy = currentUser ?? "system",
             CreatedAt = DateTime.UtcNow,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password)
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
+            ExtensionFields = request.ExtensionFields ?? new()
         };
 
         var created = await _userRepository.AddAsync(user, ct);
@@ -88,7 +91,8 @@ public class UserService : IUserService
             AvatarUrl = created.AvatarUrl,
             IsActive = created.IsActive,
             CreatedAt = created.CreatedAt,
-            Roles = created.Roles.Select(r => new RoleDto { Id = r.Id, Name = r.Name ?? string.Empty }).ToList()
+            Roles = created.Roles.Select(r => new RoleDto { Id = r.Id, Name = r.Name ?? string.Empty }).ToList(),
+            ExtensionFields = created.ExtensionFields
         };
 
         return Result<UserDto>.Success(dto);
@@ -123,6 +127,7 @@ public class UserService : IUserService
         if (request.IsActive.HasValue)
             user.IsActive = request.IsActive.Value;
 
+        user.ExtensionFields = request.ExtensionFields ?? user.ExtensionFields;
         user.UpdatedAt = DateTime.UtcNow;
         user.UpdatedBy = currentUser ?? "system";
 
@@ -140,7 +145,8 @@ public class UserService : IUserService
             AvatarUrl = user.AvatarUrl,
             IsActive = user.IsActive,
             CreatedAt = user.CreatedAt,
-            Roles = user.Roles.Select(r => new RoleDto { Id = r.Id, Name = r.Name ?? string.Empty }).ToList()
+            Roles = user.Roles.Select(r => new RoleDto { Id = r.Id, Name = r.Name ?? string.Empty }).ToList(),
+            ExtensionFields = user.ExtensionFields
         };
 
         return Result<UserDto>.Success(dto);

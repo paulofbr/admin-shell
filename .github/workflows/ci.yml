@@ -20,7 +20,7 @@ concurrency:
 
 env:
   DOTNET_VERSION: "10.0.x"
-  NODE_VERSION: "20.x"
+  NODE_VERSION: "22.x"
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
 
@@ -73,6 +73,9 @@ jobs:
 
       - name: Lint frontend
         run: npm run lint
+
+      - name: Test frontend
+        run: npm test -- --run
 
       - name: Build frontend
         run: npm run build

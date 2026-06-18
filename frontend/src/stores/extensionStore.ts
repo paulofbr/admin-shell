@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import * as extensionsApi from '@/api/extensions'
-import type { MenuItem } from '@/types'
+import type { MenuItem } from '@admin-shell/ui/types'
 
 export interface WidgetDescriptor {
   id: string

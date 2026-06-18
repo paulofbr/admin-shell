@@ -8,6 +8,16 @@
     "jsx": "preserve",
     "resolveJsonModule": true,
     "isolatedModules": true,
+    "baseUrl": ".",
+    "paths": {
+      "@admin-shell/ui/*": ["../../../frontend/packages/admin-shell-ui/src/*"],
+      "@admin-shell/ui/plugin-api": ["../../../frontend/packages/admin-shell-ui/src/utils/pluginApi.ts"],
+      "@admin-shell/ui/plugin-component-registry": ["../../../frontend/packages/admin-shell-ui/src/utils/pluginComponentRegistry.ts"],
+      "@admin-shell/ui/plugin-services": ["../../../frontend/packages/admin-shell-ui/src/utils/pluginServices.ts"],
+      "@admin-shell/ui/event-bus": ["../../../frontend/packages/admin-shell-ui/src/utils/eventBus.ts"],
+      "@admin-shell/ui/http-client": ["../../../frontend/packages/admin-shell-ui/src/http-client/index.ts"],
+      "@admin-shell/ui/types": ["../../../frontend/packages/admin-shell-ui/src/types/index.ts"]
+    },
     "skipLibCheck": true,
     "noEmit": true
   },

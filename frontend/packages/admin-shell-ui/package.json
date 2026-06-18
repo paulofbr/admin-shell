@@ -1,0 +1,25 @@
+{
+  "name": "@admin-shell/ui",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./package.json": "./package.json",
+    "./EntityEditor.vue": "./src/components/EntityEditor.vue",
+    "./ResponsiveGrid.vue": "./src/components/ResponsiveGrid.vue",
+    "./ListViewer.vue": "./src/components/ListViewer.vue",
+    "./AiAssistantButton.vue": "./src/components/AiAssistantButton.vue",
+    "./http-client": "./src/http-client/index.ts",
+    "./types": "./src/types/index.ts",
+    "./event-bus": "./src/utils/eventBus.ts",
+    "./plugin-api": "./src/utils/pluginApi.ts",
+    "./plugin-component-registry": "./src/utils/pluginComponentRegistry.ts",
+    "./plugin-services": "./src/utils/pluginServices.ts",
+    "./services/api": "./src/services/api.ts"
+  },
+  "peerDependencies": {
+    "element-plus": "^2.9.10",
+    "vue": "^3.5.13"
+  }
+}

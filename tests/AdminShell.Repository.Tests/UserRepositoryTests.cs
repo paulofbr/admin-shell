@@ -1,7 +1,9 @@
+using AdminShell.Contracts;
 using AdminShell.Core.Entities;
 using AdminShell.Infrastructure.Data.Repositories;
 using Dapper;
 using FluentAssertions;
+using NSubstitute;
 using Xunit;
 
 namespace AdminShell.Repository.Tests;
@@ -16,7 +18,14 @@ public class UserRepositoryTests
         _fixture = fixture;
     }
 
-    private UserRepository CreateRepo() => new(_fixture.ConnectionFactory);
+    private UserRepository CreateRepo()
+    {
+        var extensionRegistry = Substitute.For<IPluginExtensionRegistry>();
+        extensionRegistry.GetExtensionFieldsForEntity(Arg.Any<string>())
+            .Returns(Array.Empty<EntityExtensionFieldDefinition>());
+
+        return new UserRepository(_fixture.ConnectionFactory, extensionRegistry);
+    }
 
     private static User MakeUniqueUser(string emailPrefix = "test")
     {
@@ -339,7 +348,67 @@ public class UserRepositoryTests
 
     #endregion
 
+    [Fact]
+    public async Task AddAsync_PersistsAndHydratesExtensionFields_WhenRegistryDefinesThem()
+    {
+        var definition = new EntityExtensionFieldDefinition(
+            "User",
+            "Department",
+            EntityExtensionFieldType.String,
+            Required: true,
+            DefaultValue: "IT",
+            Label: "Department",
+            Order: 100);
+
+        await EnsureUserExtensionColumnAsync(definition.ColumnName, definition.SqlType);
+
+        var extensionRegistry = Substitute.For<IPluginExtensionRegistry>();
+        extensionRegistry.GetExtensionFieldsForEntity("User").Returns(new[] { definition });
+        var repo = new UserRepository(_fixture.ConnectionFactory, extensionRegistry);
+        var user = MakeUniqueUser("extension");
+        user.ExtensionFields =
+        [
+            new ExtensionField
+            {
+                Name = definition.Name,
+                Value = "Engineering",
+                Type = definition.Type.ToString(),
+                Required = definition.Required,
+                DefaultValue = definition.DefaultValue,
+                Label = definition.Label
+            }
+        ];
+
+        var created = await repo.AddAsync(user);
+        var loaded = await repo.GetByIdAsync(user.Id);
+
+        created.ExtensionFields.Should().ContainSingle(field =>
+            field.Name == definition.Name && field.Value != null && field.Value.ToString() == "Engineering");
+        loaded.Should().NotBeNull();
+        loaded!.ExtensionFields.Should().ContainSingle(field =>
+            field.Name == definition.Name && field.Value != null && field.Value.ToString() == "Engineering");
+
+        await CleanupUserAsync(user.Id);
+    }
+
     #region Helpers
+
+    private async Task EnsureUserExtensionColumnAsync(string columnName, string sqlType)
+    {
+        using var db = _fixture.ConnectionFactory.CreateConnection();
+        db.Open();
+
+        var exists = await db.ExecuteScalarAsync<int>(
+            @"SELECT COUNT(1)
+              FROM INFORMATION_SCHEMA.COLUMNS
+              WHERE TABLE_NAME = 'Users' AND COLUMN_NAME = @ColumnName",
+            new { ColumnName = columnName });
+
+        if (exists == 0)
+        {
+            await db.ExecuteAsync($"ALTER TABLE Users ADD [{columnName}] {sqlType} NULL");
+        }
+    }
 
     private async Task CleanupUserAsync(Guid userId)
     {

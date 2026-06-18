@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "build:frontend": "vite build",
+    "build": "npm run type-check:frontend && npm run build:frontend",
     "type-check:frontend": "vue-tsc --noEmit"
   },
   "dependencies": {

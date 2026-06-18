@@ -1,3 +1,4 @@
+using AdminShell.Contracts;
 using AdminShell.Infrastructure.Data;
 using Microsoft.Extensions.Logging.Abstractions;
 using System.Data;
@@ -24,7 +25,9 @@ public sealed class DatabaseFixture : IAsyncLifetime
     public async Task InitializeAsync()
     {
         var logger = NullLogger<DatabaseInitializer>.Instance;
-        var initializer = new DatabaseInitializer(ConnectionFactory, logger);
+        var extensionRegistry = new NoOpExtensionRegistry();
+        var managedEntitySchemaManager = new NoOpManagedEntitySchemaManager();
+        var initializer = new DatabaseInitializer(ConnectionFactory, extensionRegistry, managedEntitySchemaManager, logger);
         await initializer.InitializeAsync();
     }
 
@@ -40,5 +43,31 @@ public sealed class DatabaseFixture : IAsyncLifetime
         db.Open();
         var tx = db.BeginTransaction();
         return (db, tx);
+    }
+
+    private sealed class NoOpExtensionRegistry : IPluginExtensionRegistry
+    {
+        public IEnumerable<WidgetDescriptor> GetWidgets() => [];
+        public IEnumerable<TabDescriptor> GetTabs() => [];
+        public IEnumerable<FormFieldDescriptor> GetFormFields() => [];
+        public IEnumerable<HeaderActionDescriptor> GetHeaderActions() => [];
+        public IEnumerable<ReportDescriptor> GetReports() => [];
+        public IEnumerable<SidebarSectionDescriptor> GetSidebarSections() => [];
+        public IEnumerable<MenuItem> GetMenuItems() => [];
+        public IEnumerable<PageResourceDescriptor> GetPageResources() => [];
+        public IEnumerable<IHealthContributor> GetHealthContributors() => [];
+        public IEnumerable<ISearchProviderPlugin> GetSearchProviders() => [];
+        public IEnumerable<IDataPlugin> GetDataPlugins() => [];
+        public IEnumerable<EntityExtensionFieldDefinition> GetExtensionFields() => [];
+        public IReadOnlyList<EntityExtensionFieldDefinition> GetExtensionFieldsForEntity(string entityName) => [];
+        public IEnumerable<Type> GetManagedEntityTypes() => [];
+        public void Refresh() { }
+        public ExtensionRegistrySnapshot GetSnapshot() => new([], [], [], [], [], [], [], []);
+        public Task ApplyAllMigrationsAsync(IDbConnection connection, CancellationToken ct = default) => Task.CompletedTask;
+    }
+
+    private sealed class NoOpManagedEntitySchemaManager : IManagedEntitySchemaManager
+    {
+        public Task EnsureAsync(IDbConnection connection, CancellationToken ct = default) => Task.CompletedTask;
     }
 }

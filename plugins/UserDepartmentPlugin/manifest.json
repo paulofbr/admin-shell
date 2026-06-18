@@ -3,6 +3,6 @@
   "id": "user-department",
   "name": "User Department Plugin",
   "version": "1.0.0",
-  "description": "Adds department management and filtering to the users grid.",
+  "description": "Adds department management, extension fields, and filtering to the users grid.",
   "dependencies": []
 }

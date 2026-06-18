@@ -42,6 +42,28 @@ public sealed record AuditLogEnvelope(
     int Total
 );
 
+public sealed record LogEntryDto(
+    string? Timestamp,
+    string Level,
+    string? Source,
+    string Message,
+    string? Exception
+);
+
+public sealed record LogFilePageDto(
+    IReadOnlyList<LogEntryDto> Data,
+    bool HasMore,
+    int ScannedBytes,
+    string? Warning
+);
+
+public sealed record LogQueryDto(
+    int Skip,
+    int Take,
+    string? Type,
+    string? Message
+);
+
 public sealed record MonthlyGrowthResponse(string Month, int Count);
 
 public sealed record AuditActionCountResponse(string Action, int Count);

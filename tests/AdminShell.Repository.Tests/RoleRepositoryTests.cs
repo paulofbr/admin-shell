@@ -1,7 +1,9 @@
+using AdminShell.Contracts;
 using AdminShell.Core.Entities;
 using AdminShell.Infrastructure.Data.Repositories;
 using Dapper;
 using FluentAssertions;
+using NSubstitute;
 using Xunit;
 
 namespace AdminShell.Repository.Tests;
@@ -16,7 +18,14 @@ public class RoleRepositoryTests
         _fixture = fixture;
     }
 
-    private RoleRepository CreateRepo() => new(_fixture.ConnectionFactory);
+    private RoleRepository CreateRepo()
+    {
+        var extensionRegistry = Substitute.For<IPluginExtensionRegistry>();
+        extensionRegistry.GetExtensionFieldsForEntity(Arg.Any<string>())
+            .Returns(Array.Empty<EntityExtensionFieldDefinition>());
+
+        return new RoleRepository(_fixture.ConnectionFactory, extensionRegistry);
+    }
 
     private static Role MakeUniqueRole(string namePrefix = "TestRole")
     {

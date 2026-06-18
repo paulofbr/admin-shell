@@ -17,6 +17,8 @@ public interface IPluginExtensionRegistry
     IEnumerable<IHealthContributor> GetHealthContributors();
     IEnumerable<ISearchProviderPlugin> GetSearchProviders();
     IEnumerable<IDataPlugin> GetDataPlugins();
+    IEnumerable<EntityExtensionFieldDefinition> GetExtensionFields();
+    IReadOnlyList<EntityExtensionFieldDefinition> GetExtensionFieldsForEntity(string entityName);
     void Refresh();
     ExtensionRegistrySnapshot GetSnapshot();
     Task ApplyAllMigrationsAsync(IDbConnection connection, CancellationToken ct = default);

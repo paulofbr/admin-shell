@@ -35,7 +35,7 @@ import { computed, onMounted, ref } from 'vue'
 import { ElEmpty, ElSkeleton, ElTimeline, ElTimelineItem, ElCard } from 'element-plus'
 import type { Component } from 'vue'
 import { authApi } from '@/services/api'
-import { resolvePluginComponent } from '@/utils/pluginComponentRegistry'
+import { resolvePluginComponent } from '@admin-shell/ui/plugin-component-registry'
 import type { TabDescriptor } from '@/stores/extensionStore'
 
 const props = defineProps<{

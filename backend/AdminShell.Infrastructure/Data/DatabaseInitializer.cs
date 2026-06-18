@@ -1,3 +1,4 @@
+using AdminShell.Contracts;
 using AdminShell.Core.Entities;
 using Dapper;
 using Microsoft.Data.SqlClient;
@@ -9,11 +10,19 @@ namespace AdminShell.Infrastructure.Data;
 public class DatabaseInitializer
 {
     private readonly IDbConnectionFactory _connectionFactory;
+    private readonly IPluginExtensionRegistry _extensionRegistry;
+    private readonly IManagedEntitySchemaManager _managedEntitySchemaManager;
     private readonly ILogger<DatabaseInitializer> _logger;
 
-    public DatabaseInitializer(IDbConnectionFactory connectionFactory, ILogger<DatabaseInitializer> logger)
+    public DatabaseInitializer(
+        IDbConnectionFactory connectionFactory,
+        IPluginExtensionRegistry extensionRegistry,
+        IManagedEntitySchemaManager managedEntitySchemaManager,
+        ILogger<DatabaseInitializer> logger)
     {
         _connectionFactory = connectionFactory;
+        _extensionRegistry = extensionRegistry;
+        _managedEntitySchemaManager = managedEntitySchemaManager;
         _logger = logger;
     }
 
@@ -27,7 +36,11 @@ public class DatabaseInitializer
 
         // Run core migrations via DbUp (for future schema evolution)
         await RunCoreMigrationsAsync(db);
-        
+
+        await _managedEntitySchemaManager.EnsureAsync(db);
+
+        await _extensionRegistry.ApplyAllMigrationsAsync(db);
+
         await SeedDataAsync(db);
 
         _logger.LogInformation("Database initialized successfully");

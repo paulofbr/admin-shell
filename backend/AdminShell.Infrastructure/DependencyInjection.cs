@@ -25,6 +25,8 @@ public static class DependencyInjection
 
         // Database initializer (creates tables + seeds on startup)
         services.AddSingleton<DatabaseInitializer>();
+        services.AddSingleton<IManagedEntityProvider, CoreManagedEntityProvider>();
+        services.AddSingleton<IManagedEntitySchemaManager, ManagedEntitySchemaManager>();
 
         // Repositories
         services.AddScoped<IUserRepository, UserRepository>();

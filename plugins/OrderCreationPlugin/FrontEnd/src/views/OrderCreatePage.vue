@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElButton, ElTable, ElTableColumn, ElTag } from 'element-plus'
-import EntityEditor from '../components/EntityEditor.vue'
+import EntityEditor from '@admin-shell/ui/EntityEditor.vue'
 import type { CustomerDto, ProductDto } from '../types'
 import { formatMoney, usePluginServices } from '../types'
 import { createOrderApi, getOrderCustomers, getOrderProducts } from '../api/orderCreationApi'

@@ -6,27 +6,35 @@
     "module": "esnext",
     "types": ["vite/client"],
     "skipLibCheck": true,
-
-    /* Bundler mode */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
     "noEmit": true,
     "jsx": "preserve",
-
-    /* Path alias */
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "@admin-shell/ui/plugin-api": ["packages/admin-shell-ui/src/utils/pluginApi.ts"],
+      "@admin-shell/ui/plugin-component-registry": ["packages/admin-shell-ui/src/utils/pluginComponentRegistry.ts"],
+      "@admin-shell/ui/plugin-services": ["packages/admin-shell-ui/src/utils/pluginServices.ts"],
+      "@admin-shell/ui/event-bus": ["packages/admin-shell-ui/src/utils/eventBus.ts"],
+      "@admin-shell/ui/http-client": ["packages/admin-shell-ui/src/http-client/index.ts"],
+      "@admin-shell/ui/types": ["packages/admin-shell-ui/src/types/index.ts"],
+      "@admin-shell/ui/*": ["packages/admin-shell-ui/src/*"]
     },
-
-    /* Linting */
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue"]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/**/*.vue",
+    "packages/**/*.ts",
+    "packages/**/*.tsx",
+    "packages/**/*.vue"
+  ]
 }

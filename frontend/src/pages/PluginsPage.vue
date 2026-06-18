@@ -1,138 +1,136 @@
 <template>
-  <div class="page">
-    <div class="page__header">
-      <div>
-        <h2 class="page__title">Plugins</h2>
-        <p class="page__subtitle">Manage installed plugins — {{ plugins.length }} loaded</p>
-      </div>
+  <ListViewer title="Plugins" :subtitle="pluginsSubtitle">
+    <template #actions>
       <el-button :icon="Refresh" round @click="load" :loading="loading">
         Refresh
       </el-button>
-    </div>
+    </template>
 
-    <el-card shadow="never" class="install-card">
-      <div class="install-card__content">
-        <div>
-          <div class="install-card__title">Instalar novo plugin</div>
-          <div class="install-card__hint">
-            Faz upload de um pacote <code>.adminshell-plugin.zip</code>. O backend valida o manifest,
-            copia o plugin para a pasta de plugins, recarrega o loader e ativa o plugin.
-          </div>
-        </div>
-
-        <div class="install-card__actions">
-          <label class="file-picker" :class="{ 'file-picker--selected': selectedFile }">
-            <input
-              :key="fileInputKey"
-              type="file"
-              accept=".zip,application/zip,application/x-zip-compressed"
-              @change="onFileChange"
-            >
-            <span>{{ selectedFile?.name || 'Escolher ficheiro ZIP' }}</span>
-          </label>
-
-          <el-checkbox v-model="activateAfterInstall">Ativar depois de instalar</el-checkbox>
-
-          <el-button
-            type="primary"
-            :icon="Upload"
-            :loading="installing"
-            :disabled="!selectedFile"
-            @click="installSelectedPlugin"
-          >
-            Instalar plugin
-          </el-button>
-        </div>
-      </div>
-    </el-card>
-
-    <ListViewer title="Plugins" subtitle="Manage installed plugins — {{ plugins.length }} loaded">
-      <ResponsiveGrid
-        :data="plugins as unknown as GridRow[]"
-        :columns="gridColumns"
-        :loading="loading"
-        empty-text="No plugins"
-      >
-        <template #cell-plugin="{ row }">
-          <div style="display: flex; align-items: center; gap: 10px">
-            <div
-              style="
-                width: 36px; height: 36px; border-radius: 10px;
-                display: flex; align-items: center; justify-content: center;
-                font-size: 16px; font-weight: 600;
-              "
-              :style="{ background: getStatusColor((row as any).status) + '20', color: getStatusColor((row as any).status) }"
-            >
-              {{ (row as any).name[0] }}
-            </div>
-            <div>
-              <div style="font-weight: 500">{{ (row as any).name }}</div>
-              <div style="font-size: 12px; color: var(--el-text-color-secondary)">
-                v{{ (row as any).version }} · {{ (row as any).id }}
-              </div>
+    <template #before-card>
+      <el-card shadow="never" class="install-card">
+        <div class="install-card__content">
+          <div>
+            <div class="install-card__title">Instalar novo plugin</div>
+            <div class="install-card__hint">
+              Faz upload de um pacote <code>.adminshell-plugin.zip</code>. O backend valida o manifest,
+              copia o plugin para a pasta de plugins, recarrega o loader e ativa o plugin.
             </div>
           </div>
-        </template>
 
-        <template #cell-status="{ row }">
-          <el-tag :type="getStatusType((row as any).status)" size="small" effect="plain">
-            {{ getStatusLabel((row as any).status) }}
-          </el-tag>
-        </template>
-
-        <template #cell-dependencies="{ row }">
-          <div v-if="(row as any).dependencies && (row as any).dependencies.length > 0">
-            <el-tag
-              v-for="dep in (row as any).dependencies"
-              :key="dep.pluginId"
-              size="small"
-              :type="dep.isResolved ? '' : 'danger'"
-              style="margin-right: 4px; margin-bottom: 2px"
-            >
-              {{ dep.pluginId }} {{ dep.version ?? dep.versionConstraint }}
-              <el-tooltip
-                v-if="!dep.isResolved"
-                :content="dep.errorMessage || 'Unresolved dependency'"
+          <div class="install-card__actions">
+            <label class="file-picker" :class="{ 'file-picker--selected': selectedFile }">
+              <input
+                :key="fileInputKey"
+                type="file"
+                accept=".zip,application/zip,application/x-zip-compressed"
+                aria-label="Escolher ficheiro ZIP"
+                @change="onFileChange"
               >
-                <span style="cursor: help">⚠️</span>
-              </el-tooltip>
-            </el-tag>
+              <span>{{ selectedFile?.name || 'Escolher ficheiro ZIP' }}</span>
+            </label>
+
+            <el-checkbox v-model="activateAfterInstall">Ativar depois de instalar</el-checkbox>
+
+            <el-button
+              type="primary"
+              :icon="Upload"
+              :loading="installing"
+              :disabled="!selectedFile"
+              @click="installSelectedPlugin"
+            >
+              Instalar plugin
+            </el-button>
           </div>
-          <span v-else style="font-size: 12px; color: var(--el-text-color-placeholder)">None</span>
-        </template>
+        </div>
+      </el-card>
+    </template>
 
-        <template #cell-loaded="{ row }">
-          <span style="font-size: 12px; color: var(--el-text-color-secondary)">
-            {{ (row as any).loadedAt ? new Date((row as any).loadedAt).toLocaleString() : '—' }}
-          </span>
-        </template>
+    <ResponsiveGrid
+      :data="plugins"
+      :columns="gridColumns"
+      :loading="loading"
+      empty-text="No plugins"
+    >
+      <template #cell-plugin="{ row }">
+        <div style="display: flex; align-items: center; gap: 10px">
+          <div
+            style="
+              width: 36px; height: 36px; border-radius: 10px;
+              display: flex; align-items: center; justify-content: center;
+              font-size: 16px; font-weight: 600;
+            "
+            :style="{ background: getStatusColor(row.status) + '20', color: getStatusColor(row.status) }"
+          >
+            {{ row.name[0] }}
+          </div>
+          <div>
+            <div style="font-weight: 500">{{ row.name }}</div>
+            <div style="font-size: 12px; color: var(--el-text-color-secondary)">
+              v{{ row.version }} · {{ row.id }}
+            </div>
+          </div>
+        </div>
+      </template>
 
-        <template #cell-actions="{ row }">
-          <el-switch
-            v-if="(row as any).status === 2 || (row as any).status === 4 || (row as any).status === 5 || (row as any).status === 6"
-            :model-value="(row as any).status === 2 || (row as any).status === 4"
-            :disabled="(row as any).status === 5"
+      <template #cell-status="{ row }">
+        <el-tag :type="getStatusType(row.status)" size="small" effect="plain">
+          {{ getStatusLabel(row.status) }}
+        </el-tag>
+      </template>
+
+      <template #cell-dependencies="{ row }">
+        <div v-if="row.dependencies && row.dependencies.length > 0">
+          <el-tag
+            v-for="dep in row.dependencies"
+            :key="dep.pluginId"
             size="small"
-            @change="togglePlugin(row as any)"
-          />
-          <span v-else style="font-size: 12px; color: var(--el-text-color-placeholder)">—</span>
-        </template>
-      </ResponsiveGrid>
-    </ListViewer>
+            :type="dep.isResolved ? '' : 'danger'"
+            style="margin-right: 4px; margin-bottom: 2px"
+          >
+            {{ dep.pluginId }} {{ dep.version ?? dep.versionConstraint ?? '' }}
+            <el-tooltip
+              v-if="!dep.isResolved"
+              :content="dep.errorMessage || 'Unresolved dependency'"
+            >
+              <span style="cursor: help">⚠️</span>
+            </el-tooltip>
+          </el-tag>
+        </div>
+        <span v-else style="font-size: 12px; color: var(--el-text-color-placeholder)">None</span>
+      </template>
 
-    <!-- Error details for failed plugins -->
-    <el-card v-if="failedPlugins.length > 0" shadow="never" style="margin-top: 16px">
-      <template #header>
-        <span style="color: var(--el-color-danger); font-weight: 500">
-          ⚠ Failed Plugins ({{ failedPlugins.length }})
+      <template #cell-loaded="{ row }">
+        <span style="font-size: 12px; color: var(--el-text-color-secondary)">
+          {{ row.loadedAt ? new Date(row.loadedAt).toLocaleString() : '—' }}
         </span>
       </template>
-      <div v-for="p in failedPlugins" :key="p.id" style="margin-bottom: 12px">
-        <div style="font-weight: 500; margin-bottom: 4px">{{ p.name }} ({{ p.id }})</div>
-        <el-alert :title="p.errorMessage" type="error" show-icon :closable="false" />
-      </div>
-    </el-card>
-  </div>
+
+      <template #cell-actions="{ row }">
+        <el-switch
+          v-if="isToggleableStatus(row.status)"
+          :model-value="isActiveStatus(row.status)"
+          :disabled="isFailedStatus(row.status)"
+          size="small"
+          @change="togglePlugin(row)"
+        />
+        <span v-else style="font-size: 12px; color: var(--el-text-color-placeholder)">—</span>
+      </template>
+    </ResponsiveGrid>
+
+    <template #after-card>
+      <el-card v-if="failedPlugins.length > 0" shadow="never" class="failed-plugins-card">
+        <template #header>
+          <span style="color: var(--el-color-danger); font-weight: 500">
+            ⚠ Failed Plugins ({{ failedPlugins.length }})
+          </span>
+        </template>
+        <div v-for="p in failedPlugins" :key="p.id" style="margin-bottom: 12px">
+          <div style="font-weight: 500; margin-bottom: 4px">{{ p.name }} ({{ p.id }})</div>
+          <el-alert :title="p.errorMessage" type="error" show-icon :closable="false" />
+        </div>
+      </el-card>
+    </template>
+  </ListViewer>
 </template>
 
 <script setup lang="ts">
@@ -141,10 +139,21 @@ import { useRouter } from 'vue-router'
 import { usePluginStore } from '@/stores/pluginStore'
 import { useExtensionStore } from '@/stores/extensionStore'
 import { useNotificationStore } from '@/stores/notificationStore'
-import ListViewer from '@/components/common/ListViewer.vue'
-import ResponsiveGrid, { type GridColumn, type GridRow } from '@/components/common/ResponsiveGrid.vue'
+import ListViewer from '@admin-shell/ui/ListViewer.vue'
+import ResponsiveGrid from '@admin-shell/ui/ResponsiveGrid.vue'
+import type { GridColumn, GridRow, PluginDependencyInfo } from '@admin-shell/ui/types'
 import { Refresh, Upload } from '@element-plus/icons-vue'
 import * as pluginsApi from '@/api/plugins'
+
+type PluginGridRow = GridRow & {
+  id: string
+  name: string
+  version: string
+  dependencies: PluginDependencyInfo[]
+  loadedAt: string
+  errorMessage: string | null
+  status: number
+}
 
 const pluginStore = usePluginStore()
 const extensionStore = useExtensionStore()
@@ -156,9 +165,13 @@ const installing = ref(false)
 const activateAfterInstall = ref(true)
 const selectedFile = ref<File | null>(null)
 const fileInputKey = ref(0)
-const plugins = computed(() => pluginStore.plugins)
+const plugins = computed<PluginGridRow[]>(() => pluginStore.plugins as PluginGridRow[])
+const loadedPluginsCount = computed(() =>
+  pluginStore.plugins.filter((plugin) => isActiveStatus(plugin.status)).length
+)
+const pluginsSubtitle = computed(() => `Manage installed plugins — ${loadedPluginsCount.value} loaded`)
 const failedPlugins = computed(() =>
-  pluginStore.plugins.filter((p) => p.status === 'failed' || p.errorMessage)
+  pluginStore.plugins.filter((plugin) => isFailedStatus(plugin.status) || plugin.errorMessage)
 )
 
 const gridColumns: GridColumn[] = [
@@ -169,6 +182,18 @@ const gridColumns: GridColumn[] = [
   { id: 'loaded', label: 'Loaded', width: '110' },
   { id: 'actions', label: 'Actions', width: '120', fixed: 'right' },
 ]
+
+function isActiveStatus(status: number | string): boolean {
+  return status === 2 || status === 4 || status === 'loaded' || status === 'active'
+}
+
+function isFailedStatus(status: number | string): boolean {
+  return status === 5 || status === 'failed'
+}
+
+function isToggleableStatus(status: number | string): boolean {
+  return isActiveStatus(status) || isFailedStatus(status) || status === 6 || status === 'disabled'
+}
 
 function getStatusColor(status: number | string): string {
   const map: Record<string, string> = {
@@ -211,9 +236,12 @@ function getStatusLabel(status: number | string): string {
 
 async function load() {
   loading.value = true
-  await pluginStore.loadPlugins()
-  await pluginStore.loadPluginManifests()
-  loading.value = false
+  try {
+    await pluginStore.loadPlugins()
+    await pluginStore.loadPluginManifests()
+  } finally {
+    loading.value = false
+  }
 }
 
 function onFileChange(event: Event) {
@@ -244,10 +272,9 @@ async function installSelectedPlugin() {
   }
 }
 
-async function togglePlugin(plugin: any) {
+async function togglePlugin(plugin: PluginGridRow) {
   try {
-    const isActive = plugin.status === 2 || plugin.status === 4
-    if (isActive) {
+    if (isActiveStatus(plugin.status)) {
       await pluginStore.disablePlugin(plugin.id)
       await extensionStore.refresh()
       if (router.currentRoute.value.meta.pluginId === plugin.id) {
@@ -267,11 +294,6 @@ async function togglePlugin(plugin: any) {
 </script>
 
 <style scoped>
-.page { padding: 24px; }
-.page__header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
-.page__title { margin: 0; font-size: 22px; font-weight: 600; color: var(--el-text-color-primary); }
-.page__subtitle { margin: 4px 0 0; font-size: 14px; color: var(--el-text-color-secondary); }
-
 .install-card { margin-bottom: 16px; }
 .install-card__content { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .install-card__title { font-weight: 600; color: var(--el-text-color-primary); margin-bottom: 4px; }
@@ -285,14 +307,6 @@ async function togglePlugin(plugin: any) {
 
 /* ===== Mobile Adjustments ===== */
 @media (max-width: 768px) {
-  .page { padding: 0; }
-
-  .page__header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-  }
-
   .install-card__content {
     flex-direction: column;
     align-items: stretch;

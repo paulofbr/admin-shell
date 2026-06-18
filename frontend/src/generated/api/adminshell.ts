@@ -4,7 +4,7 @@
  * AdminShell.Host | v1
  * OpenAPI spec version: 1.0.0
  */
-import { httpClient } from '../../api/orval-client';
+import { httpClient } from '../../../packages/admin-shell-ui/src/http-client/orval-mutator';
 export interface AssignPermissionRequest {
   permissionId: string;
 }

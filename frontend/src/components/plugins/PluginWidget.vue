@@ -42,8 +42,8 @@
 import { computed, provide, ref } from 'vue'
 import type { Component } from 'vue'
 import type { WidgetDescriptor } from '@/stores/extensionStore'
-import { getPluginComponentOwner, resolvePluginComponent } from '@/utils/pluginComponentRegistry'
-import { getPluginServices } from '@/utils/pluginServices'
+import { getPluginComponentOwner, resolvePluginComponent } from '@admin-shell/ui/plugin-component-registry'
+import { getPluginServices } from '@admin-shell/ui/plugin-services'
 
 const props = defineProps<{
   widget: WidgetDescriptor

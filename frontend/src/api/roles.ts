@@ -5,14 +5,28 @@ import {
   type RoleDto,
   type UpdateRoleRequest,
 } from '@/generated/api/adminshell'
+import type { ExtensionField } from '@admin-shell/ui/types'
 
 export type Permission = PermissionDto
+
+export interface CreateRoleWithExtensionsRequest {
+  name: string
+  description?: string | null
+  extensionFields?: ExtensionField[]
+}
+
+export interface UpdateRoleWithExtensionsRequest {
+  name?: string | null
+  description?: string | null
+  extensionFields?: ExtensionField[]
+}
 
 export interface Role {
   id: string
   name: string
   description: string | null
   createdAt: string
+  extensionFields?: ExtensionField[]
 }
 
 const api = getAdminShellHostV1()
@@ -23,6 +37,7 @@ function normalizeRole(role: RoleDto): Role {
     name: role.name ?? '',
     description: role.description ?? null,
     createdAt: role.createdAt ?? '',
+    extensionFields: role.extensionFields,
   }
 }
 
@@ -42,16 +57,26 @@ export async function getRoleById(id: string): Promise<Role> {
   return normalizeRole(response.data)
 }
 
-export async function createRole(data: { name: string; description?: string }): Promise<Role> {
-  const response = await api.postApiRoles({ name: data.name, description: data.description ?? null } satisfies CreateRoleRequest)
+export async function createRole(
+  data: CreateRoleWithExtensionsRequest,
+): Promise<Role> {
+  const response = await api.postApiRoles({
+    name: data.name,
+    description: data.description ?? null,
+    extensionFields: data.extensionFields,
+  } as unknown as CreateRoleRequest)
   return normalizeRole(response.data)
 }
 
-export async function updateRole(id: string, data: { name?: string; description?: string }): Promise<Role> {
+export async function updateRole(
+  id: string,
+  data: UpdateRoleWithExtensionsRequest,
+): Promise<Role> {
   const response = await api.putApiRolesId(id, {
     name: data.name ?? '',
     description: data.description ?? null,
-  } satisfies UpdateRoleRequest)
+    extensionFields: data.extensionFields,
+  } as unknown as UpdateRoleRequest)
   return normalizeRole(response.data)
 }
 

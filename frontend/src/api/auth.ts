@@ -5,7 +5,7 @@ import {
   type RegisterRequest,
   type UserDto,
 } from '@/generated/api/adminshell'
-import type { User } from '@/types'
+import type { User } from '@admin-shell/ui/types'
 
 const api = getAdminShellHostV1()
 

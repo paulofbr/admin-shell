@@ -2,7 +2,7 @@ import {
   getAdminShellHostV1,
   type PostApiPluginsInstallBody,
 } from '@/generated/api/adminshell'
-import type { HealthStatus, PluginInstallResult } from '@/types'
+import type { HealthStatus, PluginInstallResult } from '@admin-shell/ui/types'
 
 const api = getAdminShellHostV1()
 

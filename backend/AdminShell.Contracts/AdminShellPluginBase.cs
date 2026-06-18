@@ -10,8 +10,10 @@ namespace AdminShell.Contracts;
 /// Base class for backend plugins.
 /// Reduces boilerplate by providing default metadata and no-op lifecycle hooks.
 /// </summary>
-public abstract class AdminShellPluginBase : IAdminShellPlugin
+public abstract class AdminShellPluginBase : IAdminShellPlugin, IManagedEntityProvider
 {
+    private readonly List<Type> _managedEntityTypes = [];
+
     public abstract string Id { get; }
 
     public virtual string Name => FormatPluginName(GetType().Name);
@@ -19,6 +21,26 @@ public abstract class AdminShellPluginBase : IAdminShellPlugin
     public virtual string Version => "1.0.0";
 
     public virtual string Description => string.Empty;
+
+    public IEnumerable<Type> GetManagedEntityTypes() => _managedEntityTypes;
+
+    protected void RegisterManagedEntity(Type entityType)
+    {
+        if (!_managedEntityTypes.Contains(entityType))
+            _managedEntityTypes.Add(entityType);
+    }
+
+    protected void RegisterManagedEntities(params Type[] entityTypes)
+    {
+        foreach (var entityType in entityTypes)
+            RegisterManagedEntity(entityType);
+    }
+
+    protected void RegisterManagedEntity<T>()
+        where T : class
+    {
+        RegisterManagedEntity(typeof(T));
+    }
 
     public virtual void Initialize(IServiceCollection services, IConfiguration configuration)
     {

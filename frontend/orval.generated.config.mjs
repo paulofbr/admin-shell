@@ -8,7 +8,7 @@ export default {
       "clean": true,
       "override": {
         "mutator": {
-          "path": "./src/api/orval-client.ts",
+          "path": "./packages/admin-shell-ui/src/http-client/orval-mutator.cjs",
           "name": "httpClient"
         },
         "fetch": {
@@ -26,7 +26,7 @@ export default {
       "clean": false,
       "override": {
         "mutator": {
-          "path": "./src/api/orval-client.ts",
+          "path": "./packages/admin-shell-ui/src/http-client/orval-mutator.cjs",
           "name": "httpClient"
         },
         "fetch": {
@@ -44,7 +44,7 @@ export default {
       "clean": false,
       "override": {
         "mutator": {
-          "path": "./src/api/orval-client.ts",
+          "path": "./packages/admin-shell-ui/src/http-client/orval-mutator.cjs",
           "name": "httpClient"
         },
         "fetch": {
@@ -62,7 +62,7 @@ export default {
       "clean": false,
       "override": {
         "mutator": {
-          "path": "./src/api/orval-client.ts",
+          "path": "./packages/admin-shell-ui/src/http-client/orval-mutator.cjs",
           "name": "httpClient"
         },
         "fetch": {

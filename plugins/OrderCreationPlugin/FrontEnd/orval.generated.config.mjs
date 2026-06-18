@@ -8,7 +8,7 @@ export default {
       "clean": true,
       "override": {
         "mutator": {
-          "path": "../../../frontend/packages/admin-shell-http-client/src/index.ts",
+          "path": "../../../frontend/packages/admin-shell-ui/src/http-client/orval-mutator.cjs",
           "name": "httpClient"
         },
         "fetch": {

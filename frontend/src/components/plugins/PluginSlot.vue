@@ -20,7 +20,7 @@ import { computed } from 'vue'
 import { ElEmpty } from 'element-plus'
 import { useExtensionStore } from '@/stores/extensionStore'
 import PluginWidget from '@/components/plugins/PluginWidget.vue'
-import type { WidgetDescriptor } from '@/types'
+import type { WidgetDescriptor } from '@admin-shell/ui/types'
 
 const props = withDefaults(defineProps<{
   zone: string

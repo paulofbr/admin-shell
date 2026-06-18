@@ -1,76 +1,60 @@
 <template>
-  <div class="page">
-    <div class="page__header">
-      <div>
-        <h2 class="page__title">Audit Log</h2>
-        <p class="page__subtitle">System activity and user audit trail</p>
+  <ListViewer title="Audit Log" :subtitle="auditSubtitle">
+    <template #actions>
+      <el-button :icon="Refresh" round @click="loadAuditLog" :loading="loading">
+        Refresh
+      </el-button>
+    </template>
+
+    <template #before-card>
+      <el-alert v-if="error" :title="error" type="error" show-icon closable />
+    </template>
+
+    <template #toolbar>
+      <div class="audit-filters">
+        <el-select v-model="actionFilter" clearable placeholder="Filter by action" @change="applyFilter">
+          <el-option v-for="a in actions" :key="a" :label="a" :value="a" />
+        </el-select>
+        <el-select v-model="userFilter" clearable placeholder="Filter by user" @change="applyFilter">
+          <el-option v-for="u in users" :key="u" :label="u" :value="u" />
+        </el-select>
+        <span class="audit-filters__count">
+          {{ total }} entries
+        </span>
       </div>
-      <el-button :icon="Refresh" round @click="loadAuditLog">Refresh</el-button>
-    </div>
+    </template>
 
-    <!-- Loading -->
-    <div v-if="loading" style="text-align: center; padding: 60px 0">
-      <el-skeleton :rows="6" animated />
-    </div>
-
-    <!-- Error -->
-    <el-alert v-else-if="error" :title="error" type="error" show-icon closable />
-
-    <!-- Content -->
-    <ListViewer title="Audit Log" subtitle="System activity and user audit trail">
-      <template #toolbar>
-        <div style="display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; align-items: center" class="audit-filters">
-          <el-select v-model="actionFilter" clearable placeholder="Filter by action" style="width: 200px" @change="applyFilter">
-            <el-option v-for="a in actions" :key="a" :label="a" :value="a" />
-          </el-select>
-          <el-select v-model="userFilter" clearable placeholder="Filter by user" style="width: 200px" @change="applyFilter">
-            <el-option v-for="u in users" :key="u" :label="u" :value="u" />
-          </el-select>
-          <span style="font-size: 13px; color: #909399">
-            {{ total }} entries
-          </span>
-        </div>
+    <ResponsiveGrid
+      :data="auditEntries as unknown as GridRow[]"
+      :columns="gridColumns"
+      :loading="loading"
+      :total="total"
+      :current-page="currentPage"
+      :page-size="pageSize"
+      empty-text="No audit entries yet"
+      @page-change="changePage"
+    >
+      <template #cell-action="{ row }">
+        <el-tag :type="actionType((row as unknown as AuditEntry).action)" size="small">
+          {{ (row as unknown as AuditEntry).action }}
+        </el-tag>
       </template>
 
-      <ResponsiveGrid
-        :data="auditEntries as unknown as GridRow[]"
-        :columns="gridColumns"
-        :loading="loading"
-        empty-text="No audit entries yet"
-      >
-        <template #cell-action="{ row }">
-          <el-tag :type="actionType((row as unknown as AuditEntry).action)" size="small">{{ (row as unknown as AuditEntry).action }}</el-tag>
-        </template>
-
-        <template #cell-timestamp="{ row }">
-          {{ formatDate((row as unknown as AuditEntry).timestamp) }}
-        </template>
-      </ResponsiveGrid>
-
-      <template #footer="{ loading: gridLoading }">
-        <div v-if="total > pageSize" style="margin-top: 16px; display: flex; justify-content: center">
-          <el-pagination
-            v-model:current-page="currentPage"
-            :page-size="pageSize"
-            :total="total"
-            layout="prev, pager, next"
-            @current-change="changePage"
-          />
-        </div>
-        <div v-if="gridLoading" style="text-align: center; padding: 60px 0">
-          <el-skeleton :rows="6" animated />
-        </div>
+      <template #cell-timestamp="{ row }">
+        {{ formatDate((row as unknown as AuditEntry).timestamp) }}
       </template>
-    </ListViewer>
-  </div>
+    </ResponsiveGrid>
+  </ListViewer>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { Refresh } from '@element-plus/icons-vue'
-import ListViewer from '@/components/common/ListViewer.vue'
-import ResponsiveGrid, { type GridColumn, type GridRow } from '@/components/common/ResponsiveGrid.vue'
-import { getAuditLog, type AuditEntry } from '@/api/audit'
+import ListViewer from '@admin-shell/ui/ListViewer.vue'
+import ResponsiveGrid from '@admin-shell/ui/ResponsiveGrid.vue'
+import type { AuditEntry } from '@/api/audit'
+import type { GridColumn, GridRow } from '@admin-shell/ui/types'
+import { getAuditLog } from '@/api/audit'
 
 const loading = ref(false)
 const error = ref<string | null>(null)
@@ -82,6 +66,8 @@ const actionFilter = ref('')
 const userFilter = ref('')
 const actions = ref<string[]>([])
 const users = ref<string[]>([])
+
+const auditSubtitle = computed(() => `System activity and user audit trail — ${total.value} entries`)
 
 const gridColumns: GridColumn[] = [
   { id: 'action', label: 'Action', prop: 'action', width: '160' },
@@ -154,24 +140,41 @@ onMounted(loadAuditLog)
 </script>
 
 <style scoped>
-.page { padding: 24px; }
-.page__header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
-.page__title { margin: 0; font-size: 22px; font-weight: 600; color: var(--el-text-color-primary); }
-.page__subtitle { margin: 4px 0 0; font-size: 14px; color: var(--el-text-color-secondary); }
+.audit-filters {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.audit-filters .el-select {
+  width: 200px;
+  max-width: 100%;
+}
+
+.audit-filters__count {
+  color: var(--el-text-color-secondary);
+  font-size: 13px;
+}
+
+.audit-pagination {
+  display: flex;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+.audit-loading-footer {
+  padding: 60px 0;
+  text-align: center;
+}
 
 /* ===== Mobile Adjustments ===== */
 @media (max-width: 768px) {
-  .page { padding: 0; }
-
-  .page__header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-  }
-
   .audit-filters {
     width: 100%;
     flex-direction: column;
+    align-items: stretch;
     gap: 8px;
   }
 

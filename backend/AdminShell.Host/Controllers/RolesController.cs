@@ -1,4 +1,5 @@
 using AdminShell.Contracts;
+using AdminShell.Core.Entities;
 using AdminShell.Core.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -24,9 +25,13 @@ public class RolesController : ControllerBase
     public async Task<ActionResult<List<RoleDto>>> GetAll(CancellationToken ct)
     {
         var roles = await _roleRepository.GetAllAsync(ct);
-        return Ok(roles.Select(r => new
+        return Ok(roles.Select(r => new RoleDto
         {
-            r.Id, r.Name, r.Description, r.CreatedAt
+            Id = r.Id,
+            Name = r.Name,
+            Description = r.Description,
+            CreatedAt = r.CreatedAt,
+            ExtensionFields = r.ExtensionFields
         }));
     }
 
@@ -36,7 +41,14 @@ public class RolesController : ControllerBase
     {
         var role = await _roleRepository.GetByIdAsync(id, ct);
         if (role is null) return NotFound();
-        return Ok(new { role.Id, role.Name, role.Description, role.CreatedAt });
+        return Ok(new RoleDto
+        {
+            Id = role.Id,
+            Name = role.Name,
+            Description = role.Description,
+            CreatedAt = role.CreatedAt,
+            ExtensionFields = role.ExtensionFields
+        });
     }
 
     [HttpPost]
@@ -53,12 +65,19 @@ public class RolesController : ControllerBase
             Name = request.Name,
             Description = request.Description,
             CreatedBy = User.Identity?.Name ?? "system",
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            ExtensionFields = request.ExtensionFields ?? new()
         };
 
         var created = await _roleRepository.AddAsync(role, ct);
-        return CreatedAtAction(nameof(GetById), new { id = created.Id },
-            new { created.Id, created.Name, created.Description, created.CreatedAt });
+        return CreatedAtAction(nameof(GetById), new { id = created.Id }, new RoleDto
+        {
+            Id = created.Id,
+            Name = created.Name,
+            Description = created.Description,
+            CreatedAt = created.CreatedAt,
+            ExtensionFields = created.ExtensionFields
+        });
     }
 
     [HttpPut("{id:guid}")]
@@ -79,10 +98,18 @@ public class RolesController : ControllerBase
         if (request.Description is not null)
             role.Description = request.Description;
 
+        role.ExtensionFields = request.ExtensionFields ?? role.ExtensionFields;
         role.UpdatedAt = DateTime.UtcNow;
         await _roleRepository.UpdateAsync(role, ct);
 
-        return Ok(new { role.Id, role.Name, role.Description, role.CreatedAt });
+        return Ok(new RoleDto
+        {
+            Id = role.Id,
+            Name = role.Name,
+            Description = role.Description,
+            CreatedAt = role.CreatedAt,
+            ExtensionFields = role.ExtensionFields
+        });
     }
 
     [HttpDelete("{id:guid}")]
@@ -149,6 +176,6 @@ public class RolesController : ControllerBase
     }
 }
 
-public record CreateRoleRequest(string Name, string? Description);
-public record UpdateRoleRequest(string? Name, string? Description);
+public record CreateRoleRequest(string Name, string? Description, List<ExtensionField>? ExtensionFields = null);
+public record UpdateRoleRequest(string? Name, string? Description, List<ExtensionField>? ExtensionFields = null);
 public record AssignPermissionRequest(Guid PermissionId);

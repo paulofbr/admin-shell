@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 import { render, fireEvent, screen } from '@testing-library/vue'
-import EntityEditor from './EntityEditor.vue'
+import ElementPlus from 'element-plus'
+import EntityEditor from '@admin-shell/ui/EntityEditor.vue'
+import type { ExtensionField } from '@admin-shell/ui/types'
 
 describe('EntityEditor', () => {
   it('renders title, subtitle and default actions', async () => {
@@ -8,6 +10,7 @@ describe('EntityEditor', () => {
     const onCancel = vi.fn()
 
     render(EntityEditor, {
+      global: { plugins: [ElementPlus] },
       props: {
         title: 'Edit User',
         subtitle: 'Update user details',
@@ -34,6 +37,7 @@ describe('EntityEditor', () => {
 
   it('uses custom labels and hides the save button when requested', () => {
     render(EntityEditor, {
+      global: { plugins: [ElementPlus] },
       props: {
         title: 'Permissions',
         cancelLabel: 'Close',
@@ -51,6 +55,7 @@ describe('EntityEditor', () => {
 
   it('renders toolbar and footer slots', () => {
     render(EntityEditor, {
+      global: { plugins: [ElementPlus] },
       props: {
         title: 'Order',
       },
@@ -65,5 +70,38 @@ describe('EntityEditor', () => {
     expect(screen.getByRole('button', { name: 'Custom action' })).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Save' })).not.toBeTruthy()
+  })
+
+  it('renders extension fields from formModel', () => {
+    const formModel = {
+      extensionFields: [
+        {
+          name: 'department',
+          label: 'Department',
+          type: 'string',
+          required: true,
+          value: 'Engineering',
+        },
+        {
+          name: 'location',
+          label: 'Location',
+          type: 'string',
+          required: false,
+          value: 'Lisbon',
+          slot: 'details',
+        },
+      ] satisfies ExtensionField[],
+    }
+
+    render(EntityEditor, {
+      global: { plugins: [ElementPlus] },
+      props: {
+        title: 'User',
+        formModel,
+      },
+    })
+
+    expect(screen.getByPlaceholderText('Department')).toBeTruthy()
+    expect(screen.getByPlaceholderText('Location')).toBeTruthy()
   })
 })

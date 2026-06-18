@@ -171,7 +171,7 @@ import { useRouter } from 'vue-router'
 import { useExtensionStore } from '@/stores/extensionStore'
 import { getDashboardMetrics } from '@/api/dashboard'
 import PluginSlot from '@/components/plugins/PluginSlot.vue'
-import AiAssistantButton from '@/components/common/AiAssistantButton.vue'
+import AiAssistantButton from '@admin-shell/ui/AiAssistantButton.vue'
 import {
   User,
   Wallet,

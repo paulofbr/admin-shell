@@ -7,6 +7,7 @@ public interface IPluginLoader
     IReadOnlyList<PluginDescriptor> LoadedPlugins { get; }
     IReadOnlyList<IAdminShellPlugin> GetPluginInstances();
     IReadOnlyList<IPluginComponent> GetPluginComponents();
+    IReadOnlyList<IManagedEntityProvider> GetManagedEntityProviders();
     IReadOnlyList<IWidgetPlugin> GetWidgetPlugins();
     IReadOnlyList<IMenuPlugin> GetMenuPlugins();
     EmbeddedFrontendManifest? GetEmbeddedFrontendManifest(string pluginId);

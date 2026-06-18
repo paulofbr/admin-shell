@@ -157,6 +157,7 @@ const mainMenuItems = [
   { id: 'roles', label: 'Roles', icon: Wallet, path: '/roles' },
   { id: 'plugins', label: 'Plugins', icon: Connection, path: '/plugins' },
   { id: 'settings', label: 'Settings', icon: Setting, path: '/settings' },
+  { id: 'logs', label: 'Logs', icon: Document, path: '/logs' },
 ]
 
 const sidebarSections = computed(() => extensionStore.getSidebarSectionsSorted)

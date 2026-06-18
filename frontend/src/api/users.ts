@@ -5,22 +5,24 @@ import {
   type UpdateUserRequest as GeneratedUpdateUserRequest,
   type UserDto,
 } from '@/generated/api/adminshell'
-import type { PaginatedResponse, User } from '@/types'
+import type { ExtensionField, PaginatedResponse, User } from '@admin-shell/ui/types'
 
 const api = getAdminShellHostV1()
 
-export interface CreateUserRequest {
-  email: string
-  username: string
-  password: string
-  displayName?: string
+interface CreateUserRequest {
+  email: string;
+  username: string;
+  password: string;
+  displayName?: string | null;
+  extensionFields?: ExtensionField[];
 }
 
-export interface UpdateUserRequest {
-  email?: string
-  username?: string
-  displayName?: string
-  isActive?: boolean
+interface UpdateUserRequest {
+  email?: string | null;
+  username?: string | null;
+  displayName?: string | null;
+  isActive?: boolean;
+  extensionFields?: ExtensionField[];
 }
 
 export async function getUsers(
@@ -43,7 +45,8 @@ export async function createUser(data: CreateUserRequest): Promise<User> {
     username: data.username,
     password: data.password,
     displayName: data.displayName ?? null,
-  } satisfies GeneratedCreateUserRequest)
+    extensionFields: data.extensionFields,
+  } as unknown as GeneratedCreateUserRequest)
   return response.data as UserDto as User
 }
 
@@ -53,7 +56,8 @@ export async function updateUser(id: string, data: UpdateUserRequest): Promise<U
     username: data.username ?? null,
     displayName: data.displayName ?? null,
     isActive: data.isActive ?? null,
-  } satisfies GeneratedUpdateUserRequest)
+    extensionFields: data.extensionFields,
+  } as unknown as GeneratedUpdateUserRequest)
   return response.data as UserDto as User
 }
 

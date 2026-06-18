@@ -11,8 +11,8 @@ public interface IUserService
     Task<Result> DeleteAsync(Guid id, string? currentUser, CancellationToken ct = default);
 }
 
-public record CreateUserRequest(string Email, string Username, string Password, string? DisplayName);
-public record UpdateUserRequest(string? Email, string? Username, string? DisplayName, bool? IsActive);
+public record CreateUserRequest(string Email, string Username, string Password, string? DisplayName, List<ExtensionField>? ExtensionFields = null);
+public record UpdateUserRequest(string? Email, string? Username, string? DisplayName, bool? IsActive, List<ExtensionField>? ExtensionFields = null);
 
 public record UserDto
 {
@@ -24,6 +24,7 @@ public record UserDto
     public bool IsActive { get; init; }
     public DateTime CreatedAt { get; init; }
     public List<RoleDto> Roles { get; init; } = new();
+    public List<ExtensionField> ExtensionFields { get; init; } = new();
 }
 
 public record RoleDto
@@ -32,6 +33,7 @@ public record RoleDto
     public string Name { get; init; } = default!;
     public string? Description { get; init; }
     public DateTime CreatedAt { get; init; }
+    public List<ExtensionField> ExtensionFields { get; init; } = new();
 }
 
 public record PagedResult<T>(List<T> Data, int Total, int Skip, int Take);

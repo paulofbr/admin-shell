@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import eventBus from '../utils/eventBus'
+import eventBus from '@admin-shell/ui/event-bus'
 
 export interface ApplicationConfig {
   name?: string
