@@ -1,0 +1,82 @@
+{
+  "app": {
+    "name": "Admin Shell",
+    "description": "Painel de Administração"
+  },
+  "auth": {
+    "login": "Entrar",
+    "register": "Registrar",
+    "logout": "Sair",
+    "email": "E-mail",
+    "password": "Senha",
+    "username": "Usuário",
+    "forgotPassword": "Esqueceu a senha?",
+    "loginTitle": "Entre na sua conta",
+    "registerTitle": "Crie uma nova conta"
+  },
+  "nav": {
+    "dashboard": "Painel",
+    "users": "Usuários",
+    "roles": "Funções",
+    "settings": "Configurações",
+    "plugins": "Plugins",
+    "auditLog": "Auditoria",
+    "logs": "Logs",
+    "profile": "Perfil"
+  },
+  "common": {
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "delete": "Excluir",
+    "edit": "Editar",
+    "create": "Criar",
+    "search": "Pesquisar",
+    "loading": "Carregando...",
+    "noData": "Nenhum dado disponível",
+    "confirm": "Confirmar",
+    "yes": "Sim",
+    "no": "Não"
+  },
+  "user": {
+    "title": "Gerenciamento de Usuários",
+    "createUser": "Criar Usuário",
+    "editUser": "Editar Usuário",
+    "fields": {
+      "email": "E-mail",
+      "username": "Usuário",
+      "displayName": "Nome de Exibição",
+      "roles": "Funções",
+      "status": "Status",
+      "createdAt": "Criado Em"
+    }
+  },
+  "role": {
+    "title": "Gerenciamento de Funções",
+    "name": "Nome da Função",
+    "description": "Descrição",
+    "permissions": "Permissões"
+  },
+  "plugin": {
+    "title": "Gerenciamento de Plugins",
+    "install": "Instalar Plugin",
+    "enable": "Ativar",
+    "disable": "Desativar",
+    "status": "Status",
+    "version": "Versão"
+  },
+  "settings": {
+    "title": "Configurações"
+  },
+  "validation": {
+    "required": "{field} é obrigatório",
+    "email": "Informe um e-mail válido",
+    "minLength": "{field} deve ter pelo menos {min} caracteres",
+    "passwordMismatch": "Senhas não conferem"
+  },
+  "error": {
+    "general": "Ocorreu um erro",
+    "notFound": "Página não encontrada",
+    "unauthorized": "Você não tem permissão para acessar esta página",
+    "serverError": "Erro do servidor. Tente novamente mais tarde."
+  }
+}

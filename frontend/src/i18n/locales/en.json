@@ -1,0 +1,82 @@
+{
+  "app": {
+    "name": "Admin Shell",
+    "description": "Administration Panel"
+  },
+  "auth": {
+    "login": "Sign In",
+    "register": "Register",
+    "logout": "Sign Out",
+    "email": "Email",
+    "password": "Password",
+    "username": "Username",
+    "forgotPassword": "Forgot Password?",
+    "loginTitle": "Sign in to your account",
+    "registerTitle": "Create a new account"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "users": "Users",
+    "roles": "Roles",
+    "settings": "Settings",
+    "plugins": "Plugins",
+    "auditLog": "Audit Log",
+    "logs": "Logs",
+    "profile": "Profile"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "search": "Search",
+    "loading": "Loading...",
+    "noData": "No data available",
+    "confirm": "Confirm",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "user": {
+    "title": "User Management",
+    "createUser": "Create User",
+    "editUser": "Edit User",
+    "fields": {
+      "email": "Email",
+      "username": "Username",
+      "displayName": "Display Name",
+      "roles": "Roles",
+      "status": "Status",
+      "createdAt": "Created At"
+    }
+  },
+  "role": {
+    "title": "Role Management",
+    "name": "Role Name",
+    "description": "Description",
+    "permissions": "Permissions"
+  },
+  "plugin": {
+    "title": "Plugin Management",
+    "install": "Install Plugin",
+    "enable": "Enable",
+    "disable": "Disable",
+    "status": "Status",
+    "version": "Version"
+  },
+  "settings": {
+    "title": "Settings"
+  },
+  "validation": {
+    "required": "{field} is required",
+    "email": "Please enter a valid email",
+    "minLength": "{field} must be at least {min} characters",
+    "passwordMismatch": "Passwords do not match"
+  },
+  "error": {
+    "general": "An error occurred",
+    "notFound": "Page not found",
+    "unauthorized": "You are not authorized to access this page",
+    "serverError": "Server error. Please try again later."
+  }
+}
