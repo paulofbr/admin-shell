@@ -92,9 +92,25 @@
       </template>
     </el-menu>
 
+    <!-- User Profile -->
+    <div class="sidebar__user" v-if="user">
+      <div class="sidebar__user-avatar">
+        <span>{{ (user.displayName ?? user.username).charAt(0).toUpperCase() }}</span>
+      </div>
+      <div v-if="!isCollapsed" class="sidebar__user-info">
+        <div class="sidebar__user-name">{{ user.displayName ?? user.username }}</div>
+        <div class="sidebar__user-role">{{ primaryRole }}</div>
+      </div>
+      <el-tooltip content="Profile" placement="right" :disabled="!isCollapsed">
+        <button class="sidebar__user-btn" @click="router.push('/profile')" :title="isCollapsed ? 'Profile' : undefined">
+          <el-icon :size="14"><User /></el-icon>
+        </button>
+      </el-tooltip>
+    </div>
+
     <!-- Bottom section -->
     <div class="sidebar__footer">
-      <div class="sidebar__version">v1.0.0</div>
+      <div v-if="!isCollapsed" class="sidebar__version">v1.0.0</div>
       <button 
         @click="$emit('toggleCollapse')"
         class="sidebar__collapse-btn"
@@ -113,6 +129,7 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useApplicationStore } from '@/stores/applicationStore'
+import { useAuthStore } from '@/stores/authStore'
 import { useExtensionStore } from '@/stores/extensionStore'
 import type { Component } from 'vue'
 import { storeToRefs } from 'pinia'
@@ -132,8 +149,15 @@ defineEmits<{
 const route = useRoute()
 const router = useRouter()
 const applicationStore = useApplicationStore()
+const authStore = useAuthStore()
 const extensionStore = useExtensionStore()
 const { applicationName, applicationSubtitle } = storeToRefs(applicationStore)
+const { user } = storeToRefs(authStore)
+
+const primaryRole = computed(() => {
+  if (!user.value || user.value.roles.length === 0) return 'User'
+  return user.value.roles[0].name
+})
 
 const iconMap: Record<string, Component> = {
   grid: Grid,
@@ -289,6 +313,68 @@ function getIcon(icon: string): Component {
 .sidebar__section-label--plugins {
   display: flex;
   align-items: center;
+}
+
+.sidebar__user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.sidebar__user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--el-color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.sidebar__user-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.sidebar__user-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  line-height: 1.2;
+}
+
+.sidebar__user-role {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  line-height: 1.2;
+  margin-top: 1px;
+}
+
+.sidebar__user-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.sidebar__user-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
 }
 
 .sidebar__footer {

@@ -115,4 +115,8 @@ pluginStore.loadPluginManifests().catch((error) => {
 const authStore = useAuthStore()
 authStore.loadFromStorage()
 
+app.config.errorHandler = (err, _instance, _info) => {
+  console.error('[Global Error Handler]', err, _info)
+}
+
 app.mount('#app')

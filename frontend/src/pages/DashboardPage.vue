@@ -5,11 +5,30 @@
         <h2 class="dashboard__title">Dashboard</h2>
         <p class="dashboard__subtitle">Overview and key application metrics</p>
       </div>
-      <AiAssistantButton
-        context-title="Dashboard"
-        context-subtitle="Overview and key application metrics"
-        :context-meta="{ kind: 'dashboard' }"
-      />
+      <div class="dashboard__header-actions">
+        <el-button size="small" @click="refreshMetrics" :loading="loading">
+          <el-icon><Refresh /></el-icon> Refresh
+        </el-button>
+        <AiAssistantButton
+          context-title="Dashboard"
+          context-subtitle="Overview and key application metrics"
+          :context-meta="{ kind: 'dashboard' }"
+        />
+      </div>
+    </div>
+
+    <!-- Health Status -->
+    <div class="dashboard__health">
+      <div class="health-card" v-for="h in healthItems" :key="h.label" :class="'health-card--' + h.status">
+        <div class="health-card__dot" :class="'health-card__dot--' + h.status"></div>
+        <div class="health-card__info">
+          <div class="health-card__label">{{ h.label }}</div>
+          <div class="health-card__value">{{ h.value }}</div>
+        </div>
+        <el-tag :type="h.status === 'ok' ? 'success' : h.status === 'warn' ? 'warning' : 'danger'" size="small" effect="plain">
+          {{ h.status === 'ok' ? 'Operational' : h.status === 'warn' ? 'Warning' : 'Error' }}
+        </el-tag>
+      </div>
     </div>
 
     <!-- Metrics Cards -->
@@ -32,13 +51,13 @@
           </div>
           <div v-if="metric.change !== undefined" class="metric-card__change" :class="metric.change >= 0 ? 'up' : 'down'">
             <el-icon :size="12"><ArrowUp v-if="metric.change >= 0" /><ArrowDown v-else /></el-icon>
-            {{ Math.abs(metric.change) }}%
+            {{ Math.abs(metric.change) }}{{ metric.isPercent ? '%' : '' }}
           </div>
         </el-card>
       </el-col>
     </el-row>
 
-    <!-- Second Row: Growth Chart + Activity -->
+    <!-- Second Row: Growth Chart + Recent Activity -->
     <el-row :gutter="16" class="dashboard__charts">
       <!-- User Growth Chart -->
       <el-col :xs="24" :md="16">
@@ -46,11 +65,16 @@
           <template #header>
             <div class="chart-card__header">
               <span>User Growth (Monthly)</span>
-              <el-tag size="small" type="info">{{ months }} months</el-tag>
+              <div class="chart-card__header-tabs">
+                <el-tag size="small" :type="period === 6 ? 'primary' : 'info'" style="cursor:pointer" @click="period = 6">6mo</el-tag>
+                <el-tag size="small" :type="period === 12 ? 'primary' : 'info'" style="cursor:pointer" @click="period = 12">12mo</el-tag>
+              </div>
             </div>
           </template>
           <div class="chart-card__body" v-loading="loading">
-            <div v-if="userGrowth.length === 0 && !loading" class="chart-empty">No growth data yet</div>
+            <div v-if="userGrowth.length === 0 && !loading" class="chart-empty">
+              <el-empty description="No growth data yet" />
+            </div>
             <div v-else class="growth-chart">
               <div
                 v-for="(point, i) in userGrowth"
@@ -61,7 +85,7 @@
                 <div class="growth-chart__bar-track">
                   <div
                     class="growth-chart__bar"
-                    :style="{ height: barHeight(point.count) + '%' }"
+                    :style="{ height: barHeight(point.count) + '%', background: barColor(i) }"
                     :title="`${point.month}: ${point.count} users`"
                   />
                 </div>
@@ -72,37 +96,30 @@
         </el-card>
       </el-col>
 
-      <!-- Audit Activity -->
+      <!-- Recent Activity -->
       <el-col :xs="24" :md="8">
         <el-card shadow="never" class="chart-card">
           <template #header>
             <div class="chart-card__header">
-              <span>Activity Today</span>
-              <el-tag size="small" type="warning">{{ auditToday }} events</el-tag>
+              <span>Recent Activity</span>
+              <el-tag size="small" type="warning">{{ auditToday }} today</el-tag>
             </div>
           </template>
           <div class="chart-card__body" v-loading="loading">
-            <div class="activity-stats">
-              <div class="activity-stat">
-                <el-icon :size="16" class="activity-stat__icon activity-stat__icon--success"><CircleCheckFilled /></el-icon>
-                <span class="activity-stat__label">Logins</span>
-                <span class="activity-stat__value">{{ loginsToday }}</span>
+            <div class="activity-list">
+              <div class="activity-item" v-for="act in recentActivity" :key="act.id">
+                <div class="activity-item__dot" :class="`activity-item__dot--${act.type}`"></div>
+                <div class="activity-item__content">
+                  <div class="activity-item__text">{{ act.text }}</div>
+                  <div class="activity-item__time">{{ act.time }}</div>
+                </div>
               </div>
-              <div class="activity-stat">
-                <el-icon :size="16" class="activity-stat__icon activity-stat__icon--danger"><CircleCloseFilled /></el-icon>
-                <span class="activity-stat__label">Failed Logins</span>
-                <span class="activity-stat__value">{{ failedLoginsToday }}</span>
-              </div>
-              <div class="activity-stat">
-                <el-icon :size="16" class="activity-stat__icon activity-stat__icon--warning"><WarningFilled /></el-icon>
-                <span class="activity-stat__label">Total Events</span>
-                <span class="activity-stat__value">{{ auditToday }}</span>
+              <div v-if="recentActivity.length === 0 && !loading" class="chart-empty">
+                <span style="color:var(--el-text-color-placeholder);font-size:13px">No recent activity</span>
               </div>
             </div>
-
-            <el-divider />
-
-            <div class="audit-breakdown">
+            <el-divider v-if="auditByAction.length > 0" />
+            <div v-if="auditByAction.length > 0" class="audit-breakdown">
               <div class="audit-breakdown__title">Breakdown (30 days)</div>
               <div v-for="item in auditByAction" :key="item.action" class="audit-breakdown__item">
                 <span class="audit-breakdown__action">{{ item.action }}</span>
@@ -137,27 +154,53 @@
       <el-col :xs="24" :md="12">
         <el-card shadow="never">
           <template #header>
-            <span>Quick Actions</span>
+            <div class="chart-card__header">
+              <span>Quick Actions</span>
+            </div>
           </template>
           <div class="quick-actions">
-            <el-button class="quick-action-btn" @click="router.push('/users')">
-              <el-icon><User /></el-icon> Manage Users
-            </el-button>
-            <el-button class="quick-action-btn" @click="router.push('/roles')">
-              <el-icon><Wallet /></el-icon> Manage Roles
-            </el-button>
-            <el-button class="quick-action-btn" @click="router.push('/audit')">
-              <el-icon><Bell /></el-icon> View Audit Log
-            </el-button>
-            <el-button class="quick-action-btn" @click="router.push('/plugins')">
-              <el-icon><Connection /></el-icon> Plugins
-            </el-button>
-            <el-button class="quick-action-btn" @click="router.push('/settings')">
-              <el-icon><Setting /></el-icon> Settings
-            </el-button>
-            <el-button class="quick-action-btn" type="primary" @click="refreshMetrics">
-              <el-icon><Refresh /></el-icon> Refresh
-            </el-button>
+            <div class="quick-action-card" @click="router.push('/users')">
+              <div class="quick-action-card__icon" style="background:#eef2ff;color:#6366f1">👥</div>
+              <div class="quick-action-card__info">
+                <div class="quick-action-card__title">Manage Users</div>
+                <div class="quick-action-card__desc">Create, edit, deactivate</div>
+              </div>
+            </div>
+            <div class="quick-action-card" @click="router.push('/roles')">
+              <div class="quick-action-card__icon" style="background:#ecfdf5;color:#10b981">🔐</div>
+              <div class="quick-action-card__info">
+                <div class="quick-action-card__title">Manage Roles</div>
+                <div class="quick-action-card__desc">Permissions & access</div>
+              </div>
+            </div>
+            <div class="quick-action-card" @click="router.push('/audit')">
+              <div class="quick-action-card__icon" style="background:#fffbeb;color:#f59e0b">📋</div>
+              <div class="quick-action-card__info">
+                <div class="quick-action-card__title">Audit Log</div>
+                <div class="quick-action-card__desc">Track all changes</div>
+              </div>
+            </div>
+            <div class="quick-action-card" @click="router.push('/plugins')">
+              <div class="quick-action-card__icon" style="background:#f5f3ff;color:#8b5cf6">🧩</div>
+              <div class="quick-action-card__info">
+                <div class="quick-action-card__title">Plugins</div>
+                <div class="quick-action-card__desc">Manage extensions</div>
+              </div>
+            </div>
+            <div class="quick-action-card" @click="router.push('/settings')">
+              <div class="quick-action-card__icon" style="background:#fef2f2;color:#ef4444">⚙️</div>
+              <div class="quick-action-card__info">
+                <div class="quick-action-card__title">Settings</div>
+                <div class="quick-action-card__desc">Configure system</div>
+              </div>
+            </div>
+            <div class="quick-action-card" @click="router.push('/logs')">
+              <div class="quick-action-card__icon" style="background:#f0f9ff;color:#0ea5e9">📄</div>
+              <div class="quick-action-card__info">
+                <div class="quick-action-card__title">Logs</div>
+                <div class="quick-action-card__desc">View system logs</div>
+              </div>
+            </div>
           </div>
         </el-card>
       </el-col>
@@ -190,7 +233,7 @@ const router = useRouter()
 const extensionStore = useExtensionStore()
 
 const loading = ref(true)
-const months = ref(6)
+const period = ref(6)
 const metricsData = ref({
   users: { total: 0, active: 0, inactive: 0, monthlyGrowth: [] as { month: string; count: number }[] },
   roles: { total: 0 },
@@ -210,17 +253,45 @@ const metrics = computed(() => [
       ? Math.round(((metricsData.value.users.monthlyGrowth[metricsData.value.users.monthlyGrowth.length - 1]?.count ?? 0) -
           (metricsData.value.users.monthlyGrowth[metricsData.value.users.monthlyGrowth.length - 2]?.count ?? 0)) / Math.max(1, (metricsData.value.users.monthlyGrowth[metricsData.value.users.monthlyGrowth.length - 2]?.count ?? 1)) * 100)
       : undefined,
+    isPercent: true,
     action: () => router.push('/users') },
   { key: 'active', label: 'Active Users', value: metricsData.value.users.active, icon: User, color: 'success',
     change: metricsData.value.users.total > 0
       ? Math.round(metricsData.value.users.active / metricsData.value.users.total * 100)
       : 0,
+    isPercent: true,
     action: () => router.push('/users') },
   { key: 'roles', label: 'Roles', value: metricsData.value.roles.total, icon: Wallet, color: 'warning',
+    change: undefined, isPercent: false,
     action: () => router.push('/roles') },
   { key: 'plugins', label: 'Plugins Active', value: `${metricsData.value.plugins.active}/${metricsData.value.plugins.total}`, icon: Connection, color: 'info',
+    change: metricsData.value.plugins.active, isPercent: false,
     action: () => router.push('/plugins') },
 ])
+
+const healthItems = computed(() => [
+  { label: 'API Server', value: 'Connected', status: 'ok' as const },
+  { label: 'Database', value: 'Connected', status: 'ok' as const },
+  { label: 'Plugins', value: `${metricsData.value.plugins.active}/${metricsData.value.plugins.total} active`, status: metricsData.value.plugins.active > 0 ? 'ok' as const : 'warn' as const },
+  { label: 'Cache', value: 'Operational', status: 'ok' as const },
+])
+
+const recentActivity = computed(() => {
+  const items: { id: number; type: string; text: string; time: string }[] = []
+  if (metricsData.value.audit.loginsToday > 0) {
+    items.push({ id: 1, type: 'success', text: `${metricsData.value.audit.loginsToday} successful login${metricsData.value.audit.loginsToday > 1 ? 's' : ''}`, time: 'Today' })
+  }
+  if (metricsData.value.audit.failedLoginsToday > 0) {
+    items.push({ id: 2, type: 'danger', text: `${metricsData.value.audit.failedLoginsToday} failed login attempt${metricsData.value.audit.failedLoginsToday > 1 ? 's' : ''}`, time: 'Today' })
+  }
+  if (metricsData.value.audit.today > 0) {
+    items.push({ id: 3, type: 'warning', text: `${metricsData.value.audit.today} total events today`, time: 'Today' })
+  }
+  auditByAction.value.forEach((a, i) => {
+    items.push({ id: 4 + i, type: 'info', text: `${a.action}: ${a.count} events`, time: '30 days' })
+  })
+  return items.slice(0, 8)
+})
 
 const maxGrowth = computed(() => {
   if (userGrowth.value.length === 0) return 1
@@ -229,6 +300,15 @@ const maxGrowth = computed(() => {
 
 function barHeight(count: number): number {
   return Math.max(5, (count / maxGrowth.value) * 100)
+}
+
+function barColor(index: number): string {
+  const colors = [
+    'linear-gradient(to top, #6366f1, #818cf8)',
+    'linear-gradient(to top, #6366f1, #a5b4fc)',
+    'linear-gradient(to top, #8b5cf6, #a78bfa)',
+  ]
+  return colors[index % colors.length]
 }
 
 const maxAuditCount = computed(() => {
@@ -306,6 +386,116 @@ onMounted(() => {
   padding: 24px;
   max-width: 100%;
   overflow-x: hidden;
+}
+
+.dashboard__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Health cards */
+.dashboard__health {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.health-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--el-bg-color-overlay);
+  border: 1px solid var(--el-border-color-light);
+  border-radius: 10px;
+  padding: 14px 18px;
+  transition: box-shadow 0.2s;
+}
+
+.health-card:hover {
+  box-shadow: var(--el-box-shadow-light);
+}
+
+.health-card--ok { border-left: 3px solid var(--el-color-success); }
+.health-card--warn { border-left: 3px solid var(--el-color-warning); }
+.health-card--error { border-left: 3px solid var(--el-color-danger); }
+
+.health-card__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.health-card__dot--ok { background: var(--el-color-success); box-shadow: 0 0 6px var(--el-color-success); }
+.health-card__dot--warn { background: var(--el-color-warning); box-shadow: 0 0 6px var(--el-color-warning); }
+.health-card__dot--error { background: var(--el-color-danger); box-shadow: 0 0 6px var(--el-color-danger); }
+
+.health-card__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.health-card__label {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  font-weight: 500;
+}
+
+.health-card__value {
+  font-size: 14px;
+  font-weight: 600;
+  margin-top: 1px;
+}
+
+/* Activity list */
+.activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.activity-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--el-border-color-lighter);
+}
+
+.activity-item:last-child { border-bottom: none; }
+
+.activity-item__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-top: 5px;
+  flex-shrink: 0;
+}
+
+.activity-item__dot--success { background: var(--el-color-success); }
+.activity-item__dot--danger { background: var(--el-color-danger); }
+.activity-item__dot--warning { background: var(--el-color-warning); }
+.activity-item__dot--info { background: var(--el-color-primary); }
+
+.activity-item__content { flex: 1; min-width: 0; }
+
+.activity-item__text {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.activity-item__time {
+  font-size: 11px;
+  color: var(--el-text-color-secondary);
+  margin-top: 1px;
+}
+
+.chart-card__header-tabs {
+  display: flex;
+  gap: 4px;
 }
 
 .dashboard__header {
@@ -507,36 +697,6 @@ onMounted(() => {
   margin-top: 2px;
 }
 
-/* Activity */
-.activity-stats {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.activity-stat {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-
-.activity-stat__icon--success { color: var(--el-color-success); }
-.activity-stat__icon--danger { color: var(--el-color-danger); }
-.activity-stat__icon--warning { color: var(--el-color-warning); }
-
-.activity-stat__label {
-  flex: 1 1 auto;
-  min-width: 0;
-  font-size: 13px;
-  overflow-wrap: anywhere;
-}
-
-.activity-stat__value {
-  font-size: 16px;
-  font-weight: 700;
-}
-
 .audit-breakdown__title {
   font-size: 12px;
   font-weight: 600;
@@ -632,17 +792,49 @@ onMounted(() => {
   min-width: 0;
 }
 
-.quick-action-btn {
-  width: 100%;
-  min-width: 0;
-  justify-content: flex-start;
-  overflow: hidden;
+.quick-action-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 1px solid var(--el-border-color-light);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--el-bg-color);
 }
 
-.quick-action-btn :deep(.el-button__text) {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.quick-action-card:hover {
+  border-color: var(--el-color-primary);
+  background: var(--el-color-primary-light-9);
+  transform: translateY(-1px);
+}
+
+.quick-action-card__icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.quick-action-card__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.quick-action-card__title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.quick-action-card__desc {
+  font-size: 11px;
+  color: var(--el-text-color-secondary);
+  margin-top: 1px;
 }
 
 .dashboard__widgets {
@@ -747,9 +939,8 @@ onMounted(() => {
     grid-template-columns: 1fr;
   }
 
-  .quick-action-btn {
-    width: 100%;
-    min-width: 0;
+  .dashboard__health {
+    grid-template-columns: 1fr 1fr;
   }
 
   .widget-grid {
