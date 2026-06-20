@@ -7,15 +7,15 @@ using Microsoft.AspNetCore.Mvc;
 namespace AdminShell.Host.Controllers;
 
 [Authorize]
-[ApiController]
-[Route("api/[controller]")]
-public class SettingsController : ControllerBase
+public class SettingsController : ApiControllerBase
 {
     private readonly ISettingsRepository _settingsRepository;
+    private readonly ISettingsRegistry _settingsRegistry;
 
-    public SettingsController(ISettingsRepository settingsRepository)
+    public SettingsController(ISettingsRepository settingsRepository, ISettingsRegistry settingsRegistry)
     {
         _settingsRepository = settingsRepository;
+        _settingsRegistry = settingsRegistry;
     }
 
     [HttpGet]
@@ -46,6 +46,37 @@ public class SettingsController : ControllerBase
         {
             s.Key, s.Value, s.Category, s.Description, s.ValueType
         }));
+    }
+
+    [HttpGet("options/{category}")]
+    [ProducesResponseType(typeof(SettingsResponse), StatusCodes.Status200OK)]
+    public async Task<ActionResult<SettingsResponse>> GetOptions(string category, CancellationToken ct)
+    {
+        try
+        {
+            return Ok(await _settingsRegistry.GetSettingsAsync(category, ct));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { Message = ex.Message });
+        }
+    }
+
+    [HttpPut("options/{category}")]
+    [ProducesResponseType(typeof(SettingsResponse), StatusCodes.Status200OK)]
+    public async Task<ActionResult<SettingsResponse>> UpdateOptions(
+        string category,
+        [FromBody] List<UpdateSettingRequest> requests,
+        CancellationToken ct)
+    {
+        try
+        {
+            return Ok(await _settingsRegistry.UpdateAsync(category, requests, ct));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
     }
 
     [HttpGet("{key}")]
@@ -96,5 +127,3 @@ public class SettingsController : ControllerBase
         return Ok(new { Message = "Settings updated" });
     }
 }
-
-public record UpdateSettingRequest(string Key, string Value);

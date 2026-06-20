@@ -1,33 +1,63 @@
+using System.Reflection;
 using DbUp;
-using Microsoft.Data.SqlClient;
+using DbUp.Engine;
+using DbUp.Helpers;
 using Microsoft.Extensions.Logging;
 
 namespace AdminShell.Infrastructure.Data.Migrations;
 
-/// <summary>
-/// Runs SQL migrations using DbUp.
-/// Used by IDataPlugin for plugin migrations and core DB schema.
-/// </summary>
 public static class MigrationRunner
 {
-    public static bool RunMigrations(string connectionString, string migrationsPath, ILogger logger)
+    private static readonly Assembly Assembly = typeof(MigrationRunner).Assembly;
+
+    public static DatabaseUpgradeResult RunMigrations(string connectionString, ILogger logger)
     {
         var upgrader = DeployChanges.To
             .SqlDatabase(connectionString)
-            .WithScriptsFromFileSystem(migrationsPath)
-            .WithTransaction()
-            .LogToConsole()
+            .WithScriptsEmbeddedInAssembly(Assembly, script =>
+                script.StartsWith($"{Assembly.GetName().Name}.Data.Migrations.Scripts.", StringComparison.OrdinalIgnoreCase))
+            .WithTransactionPerScript()
+            .LogTo(new DbUpLogger(logger))
             .Build();
 
         var result = upgrader.PerformUpgrade();
-        
+
         if (result.Successful)
         {
-            logger.LogInformation("DbUp migrations applied successfully from {Path}", migrationsPath);
-            return true;
+            logger.LogInformation("DbUp migrations applied successfully");
         }
-        
-        logger.LogError("DbUp migration failed: {Error}", result.Error);
-        return false;
+        else
+        {
+            logger.LogError(result.Error, "DbUp migration failed");
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Returns only new scripts that haven't been run yet (for informational purposes).
+    /// </summary>
+    public static IEnumerable<string> GetPendingScripts(string connectionString, ILogger logger)
+    {
+        var upgrader = DeployChanges.To
+            .SqlDatabase(connectionString)
+            .WithScriptsEmbeddedInAssembly(Assembly, script =>
+                script.StartsWith($"{Assembly.GetName().Name}.Data.Migrations.Scripts.", StringComparison.OrdinalIgnoreCase))
+            .LogTo(new DbUpLogger(logger))
+            .Build();
+
+        return upgrader.GetScriptsToExecute().Select(s => s.Name);
+    }
+
+    private sealed class DbUpLogger(ILogger logger) : DbUp.Engine.Output.IUpgradeLog
+    {
+        public void WriteInformation(string format, params object[] args)
+            => logger.LogInformation(format, args);
+
+        public void WriteError(string format, params object[] args)
+            => logger.LogError(format, args);
+
+        public void WriteWarning(string format, params object[] args)
+            => logger.LogWarning(format, args);
     }
 }

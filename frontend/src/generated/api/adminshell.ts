@@ -50,54 +50,26 @@ export interface AuditLogEnvelope {
   total: AuditLogEnvelopeTotal;
 }
 
-/**
- * @pattern ^-?(?:0|[1-9]\d*)$
- */
-export type CreateOrderLineRequestQuantity = number | string;
-
-/**
- * @pattern ^-?(?:0|[1-9]\d*)(?:\.\d+)?$
- */
-export type CreateOrderLineRequestDiscountPercent = null | number | string;
-
-export interface CreateOrderLineRequest {
-  productId: string;
-  /** @pattern ^-?(?:0|[1-9]\d*)$ */
-  quantity: CreateOrderLineRequestQuantity;
-  /** @pattern ^-?(?:0|[1-9]\d*)(?:\.\d+)?$ */
-  discountPercent: CreateOrderLineRequestDiscountPercent;
-}
-
-export type CreateOrderRequestPoNumber = null | string;
-
-export type CreateOrderRequestNotes = null | string;
-
-export type CreateOrderRequestRequestedDeliveryDate = null | string;
-
-export interface CreateOrderRequest {
-  customerId: string;
-  poNumber: CreateOrderRequestPoNumber;
-  notes: CreateOrderRequestNotes;
-  requestedDeliveryDate: CreateOrderRequestRequestedDeliveryDate;
-  shippingAddress: ShippingAddressRequest;
-  paymentMethod: string;
-  lines: CreateOrderLineRequest[];
-}
-
 export type CreateRoleRequestDescription = null | string;
+
+export type CreateRoleRequestExtensionFields = null | ExtensionField[];
 
 export interface CreateRoleRequest {
   name: string;
   description: CreateRoleRequestDescription;
+  extensionFields?: CreateRoleRequestExtensionFields;
 }
 
 export type CreateUserRequestDisplayName = null | string;
+
+export type CreateUserRequestExtensionFields = null | ExtensionField[];
 
 export interface CreateUserRequest {
   email: string;
   username: string;
   password: string;
   displayName: CreateUserRequestDisplayName;
+  extensionFields?: CreateUserRequestExtensionFields;
 }
 
 /**
@@ -184,10 +156,6 @@ export interface DashboardUsersMetrics {
   monthlyGrowth: MonthlyGrowthResponse[];
 }
 
-export interface DepartmentAssignmentRequest {
-  departmentId: string;
-}
-
 /**
  * @pattern ^-?(?:0|[1-9]\d*)$
  */
@@ -206,6 +174,22 @@ export interface EmbeddedFrontendManifest {
   dependencies?: PluginDependencyDescriptor[];
 }
 
+export type ExtensionFieldPossibleValues = null | FieldPossibleValues;
+
+export type ExtensionFieldSlot = null | string;
+
+export interface ExtensionField {
+  name?: string;
+  value?: unknown;
+  type?: string;
+  required?: boolean;
+  defaultValue?: unknown;
+  label?: string;
+  possibleValues?: ExtensionFieldPossibleValues;
+  frontEndValidator?: string;
+  slot?: ExtensionFieldSlot;
+}
+
 export interface ExtensionRegistrySnapshot {
   widgets: WidgetDescriptor[];
   tabs: TabDescriptor[];
@@ -215,6 +199,18 @@ export interface ExtensionRegistrySnapshot {
   sidebarSections: SidebarSectionDescriptor[];
   menuItems: MenuItem[];
   pageResources: PageResourceDescriptor[];
+}
+
+export type FieldPossibleValuesValues = null | string[];
+
+export type FieldPossibleValuesEnumName = null | string;
+
+export type FieldPossibleValuesUri = null | string;
+
+export interface FieldPossibleValues {
+  values?: FieldPossibleValuesValues;
+  enumName?: FieldPossibleValuesEnumName;
+  uri?: FieldPossibleValuesUri;
 }
 
 export type FormFieldDescriptorDefaultValue = null | string;
@@ -317,7 +313,34 @@ export interface HealthStatusResponse {
 
 export type IFormFile = Blob;
 
-export interface IOutputFormatter { [key: string]: unknown }
+export type LogEntryDtoTimestamp = null | string;
+
+export type LogEntryDtoSource = null | string;
+
+export type LogEntryDtoException = null | string;
+
+export interface LogEntryDto {
+  timestamp: LogEntryDtoTimestamp;
+  level: string;
+  source: LogEntryDtoSource;
+  message: string;
+  exception: LogEntryDtoException;
+}
+
+/**
+ * @pattern ^-?(?:0|[1-9]\d*)$
+ */
+export type LogFilePageDtoScannedBytes = number | string;
+
+export type LogFilePageDtoWarning = null | string;
+
+export interface LogFilePageDto {
+  data: LogEntryDto[];
+  hasMore: boolean;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  scannedBytes: LogFilePageDtoScannedBytes;
+  warning: LogFilePageDtoWarning;
+}
 
 export interface LoginRequest {
   email: string;
@@ -370,38 +393,6 @@ export interface MonthlyGrowthResponse {
   month: string;
   /** @pattern ^-?(?:0|[1-9]\d*)$ */
   count: MonthlyGrowthResponseCount;
-}
-
-export type ObjectResultDeclaredType = null | Type;
-
-/**
- * @pattern ^-?(?:0|[1-9]\d*)$
- */
-export type ObjectResultStatusCode = null | number | string;
-
-export interface ObjectResult {
-  value: unknown;
-  formatters?: IOutputFormatter[];
-  contentTypes?: string[];
-  declaredType?: ObjectResultDeclaredType;
-  /** @pattern ^-?(?:0|[1-9]\d*)$ */
-  statusCode?: ObjectResultStatusCode;
-}
-
-export type OkObjectResultDeclaredType = null | Type;
-
-/**
- * @pattern ^-?(?:0|[1-9]\d*)$
- */
-export type OkObjectResultStatusCode = null | number | string;
-
-export interface OkObjectResult {
-  value: unknown;
-  formatters?: IOutputFormatter[];
-  contentTypes?: string[];
-  declaredType?: OkObjectResultDeclaredType;
-  /** @pattern ^-?(?:0|[1-9]\d*)$ */
-  statusCode?: OkObjectResultStatusCode;
 }
 
 /**
@@ -562,6 +553,7 @@ export interface RoleDto {
   name?: string;
   description?: RoleDtoDescription;
   createdAt?: string;
+  extensionFields?: ExtensionField[];
 }
 
 export interface RolePermissionsResponse {
@@ -617,12 +609,38 @@ export interface SettingDto {
   updatedBy?: SettingDtoUpdatedBy;
 }
 
-export interface ShippingAddressRequest {
-  street: string;
-  city: string;
-  postalCode: string;
-  country: string;
+export type SettingOptionDtoDescription = null | string;
+
+export type SettingOptionDtoValue = null | string;
+
+/**
+ * @pattern ^-?(?:0|[1-9]\d*)$
+ */
+export type SettingOptionDtoOrder = number | string;
+
+export type SettingOptionDtoValidator = null | string;
+
+export interface SettingOptionDto {
+  key: string;
+  name: string;
+  label: string;
+  description: SettingOptionDtoDescription;
+  type: SettingType;
+  value: SettingOptionDtoValue;
+  defaultValue: string;
+  required: boolean;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  order: SettingOptionDtoOrder;
+  validator: SettingOptionDtoValidator;
 }
+
+export interface SettingsResponse {
+  category: string;
+  name: string;
+  settings: SettingOptionDto[];
+}
+
+export type SettingType = number;
 
 export type SidebarMenuItemIcon = null | string;
 
@@ -683,15 +701,16 @@ export interface TabDescriptor {
   props?: TabDescriptorProps;
 }
 
-export interface Type {}
-
 export type UpdateRoleRequestName = null | string;
 
 export type UpdateRoleRequestDescription = null | string;
 
+export type UpdateRoleRequestExtensionFields = null | ExtensionField[];
+
 export interface UpdateRoleRequest {
   name: UpdateRoleRequestName;
   description: UpdateRoleRequestDescription;
+  extensionFields?: UpdateRoleRequestExtensionFields;
 }
 
 export interface UpdateSettingRequest {
@@ -707,11 +726,14 @@ export type UpdateUserRequestDisplayName = null | string;
 
 export type UpdateUserRequestIsActive = null | boolean;
 
+export type UpdateUserRequestExtensionFields = null | ExtensionField[];
+
 export interface UpdateUserRequest {
   email: UpdateUserRequestEmail;
   username: UpdateUserRequestUsername;
   displayName: UpdateUserRequestDisplayName;
   isActive: UpdateUserRequestIsActive;
+  extensionFields?: UpdateUserRequestExtensionFields;
 }
 
 export type UserDtoAvatarUrl = null | string;
@@ -725,6 +747,7 @@ export interface UserDto {
   isActive?: boolean;
   createdAt?: string;
   roles?: RoleDto[];
+  extensionFields?: ExtensionField[];
 }
 
 /**
@@ -762,22 +785,7 @@ export interface WidgetDescriptor {
   settings?: WidgetDescriptorSettings;
 }
 
-export type GenerateReportParams = {
-format?: string;
-};
-
-export type GetOrdersParams = {
-/**
- * @pattern ^-?(?:0|[1-9]\d*)$
- */
-page?: number | string;
-/**
- * @pattern ^-?(?:0|[1-9]\d*)$
- */
-pageSize?: number | string;
-};
-
-export type GetApiAuditLogParams = {
+export type GetApiV1AuditLogParams = {
 /**
  * @pattern ^-?(?:0|[1-9]\d*)$
  */
@@ -788,7 +796,7 @@ skip?: number | string;
 take?: number | string;
 };
 
-export type GetApiAuditLogActionActionParams = {
+export type GetApiV1AuditLogActionActionParams = {
 /**
  * @pattern ^-?(?:0|[1-9]\d*)$
  */
@@ -799,7 +807,7 @@ skip?: number | string;
 take?: number | string;
 };
 
-export type GetApiExtensionsSearchParams = {
+export type GetApiV1ExtensionsSearchParams = {
 q?: string;
 /**
  * @pattern ^-?(?:0|[1-9]\d*)$
@@ -807,17 +815,30 @@ q?: string;
 limit?: number | string;
 };
 
-export type PostApiPluginsInstallBodyAllOf = {
+export type GetApiV1LogsParams = {
+/**
+ * @pattern ^-?(?:0|[1-9]\d*)$
+ */
+skip?: number | string;
+/**
+ * @pattern ^-?(?:0|[1-9]\d*)$
+ */
+take?: number | string;
+type?: string;
+message?: string;
+};
+
+export type PostApiV1PluginsInstallBodyAllOf = {
   file?: IFormFile;
 };
 
-export type PostApiPluginsInstallBodyAllOfTwo = {
+export type PostApiV1PluginsInstallBodyAllOfTwo = {
   activate?: boolean;
 };
 
-export type PostApiPluginsInstallBody = PostApiPluginsInstallBodyAllOf & PostApiPluginsInstallBodyAllOfTwo;
+export type PostApiV1PluginsInstallBody = PostApiV1PluginsInstallBodyAllOf & PostApiV1PluginsInstallBodyAllOfTwo;
 
-export type GetApiUsersParams = {
+export type GetApiV1UsersParams = {
 /**
  * @pattern ^-?(?:0|[1-9]\d*)$
  */
@@ -832,623 +853,572 @@ displayName?: string;
 };
 
 export const getAdminShellHostV1 = () => {
-const getDepartments = (
-    
- ) => {
-      return httpClient<void>(
-      {url: `/api/plugins/user-department/departments`, method: 'GET'
-    },
-      );
-    }
-  
-const getUserDepartment = (
-    userId: string,
- ) => {
-      return httpClient<void>(
-      {url: `/api/plugins/user-department/users/${userId}/department`, method: 'GET'
-    },
-      );
-    }
-  
-const setUserDepartment = (
-    userId: string,
-    departmentAssignmentRequest: DepartmentAssignmentRequest,
- ) => {
-      return httpClient<void>(
-      {url: `/api/plugins/user-department/users/${userId}/department`, method: 'PUT',
-      headers: {'Content-Type': 'application/json', },
-      data: departmentAssignmentRequest
-    },
-      );
-    }
-  
-const getReports = (
-    
- ) => {
-      return httpClient<void>(
-      {url: `/api/plugins/reporting/reports`, method: 'GET'
-    },
-      );
-    }
-  
-const getWidgetSummary = (
-    
- ) => {
-      return httpClient<void>(
-      {url: `/api/plugins/reporting/widgets/summary`, method: 'GET'
-    },
-      );
-    }
-  
-const generateReport = (
-    reportId: string,
-    params?: GenerateReportParams,
- ) => {
-      return httpClient<void>(
-      {url: `/api/plugins/reporting/reports/generate/${reportId}`, method: 'GET',
-        params
-    },
-      );
-    }
-  
-const getOrderCustomers = (
-    
- ) => {
-      return httpClient<OkObjectResult>(
-      {url: `/api/plugins/order-creation/catalog/customers`, method: 'GET'
-    },
-      );
-    }
-  
-const getOrderProducts = (
-    
- ) => {
-      return httpClient<OkObjectResult>(
-      {url: `/api/plugins/order-creation/catalog/products`, method: 'GET'
-    },
-      );
-    }
-  
-const getOrders = (
-    params?: GetOrdersParams,
- ) => {
-      return httpClient<OkObjectResult>(
-      {url: `/api/plugins/order-creation/orders`, method: 'GET',
-        params
-    },
-      );
-    }
-  
-const createOrder = (
-    createOrderRequest: CreateOrderRequest,
- ) => {
-      return httpClient<ObjectResult>(
-      {url: `/api/plugins/order-creation/orders`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: createOrderRequest
-    },
-      );
-    }
-  
-const getOrderSummary = (
-    
- ) => {
-      return httpClient<OkObjectResult>(
-      {url: `/api/plugins/order-creation/orders/summary`, method: 'GET'
-    },
-      );
-    }
-  
-const getApiAuditLog = (
-    params?: GetApiAuditLogParams,
+const getApiV1AuditLog = (
+    params?: GetApiV1AuditLogParams,
  ) => {
       return httpClient<AuditLogEnvelope>(
-      {url: `/api/AuditLog`, method: 'GET',
+      {url: `/api/v1/AuditLog`, method: 'GET',
         params
     },
       );
     }
   
-const getApiAuditLogActionAction = (
+const getApiV1AuditLogActionAction = (
     action: string,
-    params?: GetApiAuditLogActionActionParams,
+    params?: GetApiV1AuditLogActionActionParams,
  ) => {
       return httpClient<AuditLogEnvelope>(
-      {url: `/api/AuditLog/action/${action}`, method: 'GET',
+      {url: `/api/v1/AuditLog/action/${action}`, method: 'GET',
         params
     },
       );
     }
   
-const postApiAuthLogin = (
+const postApiV1AuthLogin = (
     loginRequest: LoginRequest,
  ) => {
       return httpClient<LoginResponse>(
-      {url: `/api/Auth/login`, method: 'POST',
+      {url: `/api/v1/Auth/login`, method: 'POST',
       headers: {'Content-Type': 'application/json', },
       data: loginRequest
     },
       );
     }
   
-const postApiAuthRefresh = (
+const postApiV1AuthRefresh = (
     refreshTokenRequest: RefreshTokenRequest,
  ) => {
       return httpClient<LoginResponse>(
-      {url: `/api/Auth/refresh`, method: 'POST',
+      {url: `/api/v1/Auth/refresh`, method: 'POST',
       headers: {'Content-Type': 'application/json', },
       data: refreshTokenRequest
     },
       );
     }
   
-const postApiAuthRegister = (
+const postApiV1AuthRegister = (
     registerRequest: RegisterRequest,
  ) => {
       return httpClient<LoginResponse>(
-      {url: `/api/Auth/register`, method: 'POST',
+      {url: `/api/v1/Auth/register`, method: 'POST',
       headers: {'Content-Type': 'application/json', },
       data: registerRequest
     },
       );
     }
   
-const postApiAuthLogout = (
+const postApiV1AuthLogout = (
     
  ) => {
       return httpClient<MessageResponse>(
-      {url: `/api/Auth/logout`, method: 'POST'
+      {url: `/api/v1/Auth/logout`, method: 'POST'
     },
       );
     }
   
-const getApiAuthMe = (
+const getApiV1AuthMe = (
     
  ) => {
       return httpClient<UserDto>(
-      {url: `/api/Auth/me`, method: 'GET'
+      {url: `/api/v1/Auth/me`, method: 'GET'
     },
       );
     }
   
-const getApiDashboardMetrics = (
+const getApiV1DashboardMetrics = (
     
  ) => {
       return httpClient<DashboardMetricsResponse>(
-      {url: `/api/dashboard/metrics`, method: 'GET'
+      {url: `/api/v1/dashboard/metrics`, method: 'GET'
     },
       );
     }
   
-const getApiExtensions = (
+const getApiV1Extensions = (
     
  ) => {
       return httpClient<ExtensionRegistrySnapshot>(
-      {url: `/api/extensions`, method: 'GET'
+      {url: `/api/v1/extensions`, method: 'GET'
     },
       );
     }
   
-const getApiExtensionsWidgets = (
+const getApiV1ExtensionsWidgets = (
     
  ) => {
       return httpClient<WidgetDescriptor[]>(
-      {url: `/api/extensions/widgets`, method: 'GET'
+      {url: `/api/v1/extensions/widgets`, method: 'GET'
     },
       );
     }
   
-const getApiExtensionsTabs = (
+const getApiV1ExtensionsTabs = (
     
  ) => {
       return httpClient<TabDescriptor[]>(
-      {url: `/api/extensions/tabs`, method: 'GET'
+      {url: `/api/v1/extensions/tabs`, method: 'GET'
     },
       );
     }
   
-const getApiExtensionsFormFields = (
+const getApiV1ExtensionsFormFields = (
     
  ) => {
       return httpClient<FormFieldDescriptor[]>(
-      {url: `/api/extensions/form-fields`, method: 'GET'
+      {url: `/api/v1/extensions/form-fields`, method: 'GET'
     },
       );
     }
   
-const getApiExtensionsHeaderActions = (
+const getApiV1ExtensionsHeaderActions = (
     
  ) => {
       return httpClient<HeaderActionDescriptor[]>(
-      {url: `/api/extensions/header-actions`, method: 'GET'
+      {url: `/api/v1/extensions/header-actions`, method: 'GET'
     },
       );
     }
   
-const getApiExtensionsReports = (
+const getApiV1ExtensionsReports = (
     
  ) => {
       return httpClient<ReportDescriptor[]>(
-      {url: `/api/extensions/reports`, method: 'GET'
+      {url: `/api/v1/extensions/reports`, method: 'GET'
     },
       );
     }
   
-const getApiExtensionsSidebarSections = (
+const getApiV1ExtensionsSidebarSections = (
     
  ) => {
       return httpClient<SidebarSectionDescriptor[]>(
-      {url: `/api/extensions/sidebar-sections`, method: 'GET'
+      {url: `/api/v1/extensions/sidebar-sections`, method: 'GET'
     },
       );
     }
   
-const getApiExtensionsMenuItems = (
+const getApiV1ExtensionsMenuItems = (
     
  ) => {
       return httpClient<MenuItem[]>(
-      {url: `/api/extensions/menu-items`, method: 'GET'
+      {url: `/api/v1/extensions/menu-items`, method: 'GET'
     },
       );
     }
   
-const getApiExtensionsPageResources = (
+const getApiV1ExtensionsPageResources = (
     
  ) => {
       return httpClient<PageResourceDescriptor[]>(
-      {url: `/api/extensions/page-resources`, method: 'GET'
+      {url: `/api/v1/extensions/page-resources`, method: 'GET'
     },
       );
     }
   
-const postApiExtensionsRefresh = (
+const postApiV1ExtensionsRefresh = (
     
  ) => {
       return httpClient<MessageResponse>(
-      {url: `/api/extensions/refresh`, method: 'POST'
+      {url: `/api/v1/extensions/refresh`, method: 'POST'
     },
       );
     }
   
-const getApiExtensionsSearch = (
-    params?: GetApiExtensionsSearchParams,
+const getApiV1ExtensionsSearch = (
+    params?: GetApiV1ExtensionsSearchParams,
  ) => {
       return httpClient<SearchResultEnvelope[]>(
-      {url: `/api/extensions/search`, method: 'GET',
+      {url: `/api/v1/extensions/search`, method: 'GET',
         params
     },
       );
     }
   
-const getApiPluginsPluginIdFrontendManifestJson = (
+const getApiV1PluginsPluginIdFrontendManifestJson = (
     pluginId: string,
  ) => {
       return httpClient<EmbeddedFrontendManifest>(
-      {url: `/api/plugins/${pluginId}/frontend/manifest.json`, method: 'GET'
+      {url: `/api/v1/plugins/${pluginId}/frontend/manifest.json`, method: 'GET'
     },
       );
     }
   
-const getApiPluginsPluginIdFrontendPath = (
+const getApiV1PluginsPluginIdFrontendPath = (
     pluginId: string,
     path: string,
  ) => {
       return httpClient<void>(
-      {url: `/api/plugins/${pluginId}/frontend/${path}`, method: 'GET'
+      {url: `/api/v1/plugins/${pluginId}/frontend/${path}`, method: 'GET'
     },
       );
     }
   
-const getApiHealth = (
+const getApiV1Health = (
     
  ) => {
       return httpClient<HealthStatusResponse>(
-      {url: `/api/Health`, method: 'GET'
+      {url: `/api/v1/Health`, method: 'GET'
     },
       );
     }
   
-const postApiPluginsInstall = (
-    postApiPluginsInstallBody: PostApiPluginsInstallBody,
+const getApiV1Logs = (
+    params?: GetApiV1LogsParams,
+ ) => {
+      return httpClient<LogFilePageDto>(
+      {url: `/api/v1/Logs`, method: 'GET',
+        params
+    },
+      );
+    }
+  
+const getApiV1LogsLevels = (
+    
+ ) => {
+      return httpClient<string[]>(
+      {url: `/api/v1/Logs/levels`, method: 'GET'
+    },
+      );
+    }
+  
+const postApiV1PluginsInstall = (
+    postApiV1PluginsInstallBody: PostApiV1PluginsInstallBody,
  ) => {const formData = new FormData();
-if(postApiPluginsInstallBody.file !== undefined) {
- formData.append(`file`, postApiPluginsInstallBody.file)
+if(postApiV1PluginsInstallBody.file !== undefined) {
+ formData.append(`file`, postApiV1PluginsInstallBody.file)
  }
 
-if(postApiPluginsInstallBody.activate !== undefined) {
- formData.append(`activate`, postApiPluginsInstallBody.activate.toString())
+if(postApiV1PluginsInstallBody.activate !== undefined) {
+ formData.append(`activate`, postApiV1PluginsInstallBody.activate.toString())
  }
 
       return httpClient<PluginInstallResult>(
-      {url: `/api/plugins/install`, method: 'POST',
+      {url: `/api/v1/plugins/install`, method: 'POST',
       headers: {'Content-Type': 'multipart/form-data', },
        data: formData
     },
       );
     }
   
-const getApiPlugins = (
+const getApiV1Plugins = (
     
  ) => {
       return httpClient<PluginDescriptor[]>(
-      {url: `/api/plugins`, method: 'GET'
+      {url: `/api/v1/plugins`, method: 'GET'
     },
       );
     }
   
-const postApiPluginsPluginIdEnable = (
+const getApiV1PluginsPluginIdSettings = (
+    pluginId: string,
+ ) => {
+      return httpClient<SettingsResponse>(
+      {url: `/api/v1/plugins/${pluginId}/settings`, method: 'GET'
+    },
+      );
+    }
+  
+const putApiV1PluginsPluginIdSettings = (
+    pluginId: string,
+    updateSettingRequest: UpdateSettingRequest[],
+ ) => {
+      return httpClient<SettingsResponse>(
+      {url: `/api/v1/plugins/${pluginId}/settings`, method: 'PUT',
+      headers: {'Content-Type': 'application/json', },
+      data: updateSettingRequest
+    },
+      );
+    }
+  
+const postApiV1PluginsPluginIdEnable = (
     pluginId: string,
  ) => {
       return httpClient<MessageResponse>(
-      {url: `/api/plugins/${pluginId}/enable`, method: 'POST'
+      {url: `/api/v1/plugins/${pluginId}/enable`, method: 'POST'
     },
       );
     }
   
-const postApiPluginsPluginIdDisable = (
+const postApiV1PluginsPluginIdDisable = (
     pluginId: string,
  ) => {
       return httpClient<MessageResponse>(
-      {url: `/api/plugins/${pluginId}/disable`, method: 'POST'
+      {url: `/api/v1/plugins/${pluginId}/disable`, method: 'POST'
     },
       );
     }
   
-const getApiRoles = (
+const getApiV1Roles = (
     
  ) => {
       return httpClient<RoleDto[]>(
-      {url: `/api/Roles`, method: 'GET'
+      {url: `/api/v1/Roles`, method: 'GET'
     },
       );
     }
   
-const postApiRoles = (
+const postApiV1Roles = (
     createRoleRequest: CreateRoleRequest,
  ) => {
       return httpClient<RoleDto>(
-      {url: `/api/Roles`, method: 'POST',
+      {url: `/api/v1/Roles`, method: 'POST',
       headers: {'Content-Type': 'application/json', },
       data: createRoleRequest
     },
       );
     }
   
-const getApiRolesId = (
+const getApiV1RolesId = (
     id: string,
  ) => {
       return httpClient<RoleDto>(
-      {url: `/api/Roles/${id}`, method: 'GET'
+      {url: `/api/v1/Roles/${id}`, method: 'GET'
     },
       );
     }
   
-const putApiRolesId = (
+const putApiV1RolesId = (
     id: string,
     updateRoleRequest: UpdateRoleRequest,
  ) => {
       return httpClient<RoleDto>(
-      {url: `/api/Roles/${id}`, method: 'PUT',
+      {url: `/api/v1/Roles/${id}`, method: 'PUT',
       headers: {'Content-Type': 'application/json', },
       data: updateRoleRequest
     },
       );
     }
   
-const deleteApiRolesId = (
+const deleteApiV1RolesId = (
     id: string,
  ) => {
       return httpClient<void>(
-      {url: `/api/Roles/${id}`, method: 'DELETE'
+      {url: `/api/v1/Roles/${id}`, method: 'DELETE'
     },
       );
     }
   
-const getApiRolesPermissions = (
+const getApiV1RolesPermissions = (
     
  ) => {
       return httpClient<PermissionDto[]>(
-      {url: `/api/Roles/permissions`, method: 'GET'
+      {url: `/api/v1/Roles/permissions`, method: 'GET'
     },
       );
     }
   
-const getApiRolesIdPermissions = (
+const getApiV1RolesIdPermissions = (
     id: string,
  ) => {
       return httpClient<RolePermissionsResponse>(
-      {url: `/api/Roles/${id}/permissions`, method: 'GET'
+      {url: `/api/v1/Roles/${id}/permissions`, method: 'GET'
     },
       );
     }
   
-const postApiRolesIdPermissions = (
+const postApiV1RolesIdPermissions = (
     id: string,
     assignPermissionRequest: AssignPermissionRequest,
  ) => {
       return httpClient<MessageResponse>(
-      {url: `/api/Roles/${id}/permissions`, method: 'POST',
+      {url: `/api/v1/Roles/${id}/permissions`, method: 'POST',
       headers: {'Content-Type': 'application/json', },
       data: assignPermissionRequest
     },
       );
     }
   
-const deleteApiRolesIdPermissionsPermissionId = (
+const deleteApiV1RolesIdPermissionsPermissionId = (
     id: string,
     permissionId: string,
  ) => {
       return httpClient<void>(
-      {url: `/api/Roles/${id}/permissions/${permissionId}`, method: 'DELETE'
+      {url: `/api/v1/Roles/${id}/permissions/${permissionId}`, method: 'DELETE'
     },
       );
     }
   
-const getApiSettings = (
+const getApiV1Settings = (
     
  ) => {
       return httpClient<SettingDto[]>(
-      {url: `/api/Settings`, method: 'GET'
+      {url: `/api/v1/Settings`, method: 'GET'
     },
       );
     }
   
-const putApiSettings = (
+const putApiV1Settings = (
     updateSettingRequest: UpdateSettingRequest[],
  ) => {
       return httpClient<MessageResponse>(
-      {url: `/api/Settings`, method: 'PUT',
+      {url: `/api/v1/Settings`, method: 'PUT',
       headers: {'Content-Type': 'application/json', },
       data: updateSettingRequest
     },
       );
     }
   
-const getApiSettingsCategories = (
+const getApiV1SettingsCategories = (
     
  ) => {
       return httpClient<string[]>(
-      {url: `/api/Settings/categories`, method: 'GET'
+      {url: `/api/v1/Settings/categories`, method: 'GET'
     },
       );
     }
   
-const getApiSettingsCategoryCategory = (
+const getApiV1SettingsCategoryCategory = (
     category: string,
  ) => {
       return httpClient<SettingDto[]>(
-      {url: `/api/Settings/category/${category}`, method: 'GET'
+      {url: `/api/v1/Settings/category/${category}`, method: 'GET'
     },
       );
     }
   
-const getApiSettingsKey = (
+const getApiV1SettingsOptionsCategory = (
+    category: string,
+ ) => {
+      return httpClient<SettingsResponse>(
+      {url: `/api/v1/Settings/options/${category}`, method: 'GET'
+    },
+      );
+    }
+  
+const putApiV1SettingsOptionsCategory = (
+    category: string,
+    updateSettingRequest: UpdateSettingRequest[],
+ ) => {
+      return httpClient<SettingsResponse>(
+      {url: `/api/v1/Settings/options/${category}`, method: 'PUT',
+      headers: {'Content-Type': 'application/json', },
+      data: updateSettingRequest
+    },
+      );
+    }
+  
+const getApiV1SettingsKey = (
     key: string,
  ) => {
       return httpClient<SettingDto>(
-      {url: `/api/Settings/${key}`, method: 'GET'
+      {url: `/api/v1/Settings/${key}`, method: 'GET'
     },
       );
     }
   
-const putApiSettingsKey = (
+const putApiV1SettingsKey = (
     key: string,
     updateSettingRequest: UpdateSettingRequest,
  ) => {
       return httpClient<SettingDto>(
-      {url: `/api/Settings/${key}`, method: 'PUT',
+      {url: `/api/v1/Settings/${key}`, method: 'PUT',
       headers: {'Content-Type': 'application/json', },
       data: updateSettingRequest
     },
       );
     }
   
-const getApiUsers = (
-    params?: GetApiUsersParams,
+const getApiV1Users = (
+    params?: GetApiV1UsersParams,
  ) => {
       return httpClient<PagedResultOfUserDto>(
-      {url: `/api/Users`, method: 'GET',
+      {url: `/api/v1/Users`, method: 'GET',
         params
     },
       );
     }
   
-const postApiUsers = (
+const postApiV1Users = (
     createUserRequest: CreateUserRequest,
  ) => {
       return httpClient<UserDto>(
-      {url: `/api/Users`, method: 'POST',
+      {url: `/api/v1/Users`, method: 'POST',
       headers: {'Content-Type': 'application/json', },
       data: createUserRequest
     },
       );
     }
   
-const getApiUsersId = (
+const getApiV1UsersId = (
     id: string,
  ) => {
       return httpClient<UserDto>(
-      {url: `/api/Users/${id}`, method: 'GET'
+      {url: `/api/v1/Users/${id}`, method: 'GET'
     },
       );
     }
   
-const putApiUsersId = (
+const putApiV1UsersId = (
     id: string,
     updateUserRequest: UpdateUserRequest,
  ) => {
       return httpClient<UserDto>(
-      {url: `/api/Users/${id}`, method: 'PUT',
+      {url: `/api/v1/Users/${id}`, method: 'PUT',
       headers: {'Content-Type': 'application/json', },
       data: updateUserRequest
     },
       );
     }
   
-const deleteApiUsersId = (
+const deleteApiV1UsersId = (
     id: string,
  ) => {
       return httpClient<void>(
-      {url: `/api/Users/${id}`, method: 'DELETE'
+      {url: `/api/v1/Users/${id}`, method: 'DELETE'
     },
       );
     }
   
-return {getDepartments,getUserDepartment,setUserDepartment,getReports,getWidgetSummary,generateReport,getOrderCustomers,getOrderProducts,getOrders,createOrder,getOrderSummary,getApiAuditLog,getApiAuditLogActionAction,postApiAuthLogin,postApiAuthRefresh,postApiAuthRegister,postApiAuthLogout,getApiAuthMe,getApiDashboardMetrics,getApiExtensions,getApiExtensionsWidgets,getApiExtensionsTabs,getApiExtensionsFormFields,getApiExtensionsHeaderActions,getApiExtensionsReports,getApiExtensionsSidebarSections,getApiExtensionsMenuItems,getApiExtensionsPageResources,postApiExtensionsRefresh,getApiExtensionsSearch,getApiPluginsPluginIdFrontendManifestJson,getApiPluginsPluginIdFrontendPath,getApiHealth,postApiPluginsInstall,getApiPlugins,postApiPluginsPluginIdEnable,postApiPluginsPluginIdDisable,getApiRoles,postApiRoles,getApiRolesId,putApiRolesId,deleteApiRolesId,getApiRolesPermissions,getApiRolesIdPermissions,postApiRolesIdPermissions,deleteApiRolesIdPermissionsPermissionId,getApiSettings,putApiSettings,getApiSettingsCategories,getApiSettingsCategoryCategory,getApiSettingsKey,putApiSettingsKey,getApiUsers,postApiUsers,getApiUsersId,putApiUsersId,deleteApiUsersId}};
-export type GetDepartmentsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getDepartments']>>>
-export type GetUserDepartmentResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getUserDepartment']>>>
-export type SetUserDepartmentResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['setUserDepartment']>>>
-export type GetReportsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getReports']>>>
-export type GetWidgetSummaryResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getWidgetSummary']>>>
-export type GenerateReportResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['generateReport']>>>
-export type GetOrderCustomersResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getOrderCustomers']>>>
-export type GetOrderProductsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getOrderProducts']>>>
-export type GetOrdersResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getOrders']>>>
-export type CreateOrderResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['createOrder']>>>
-export type GetOrderSummaryResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getOrderSummary']>>>
-export type GetApiAuditLogResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiAuditLog']>>>
-export type GetApiAuditLogActionActionResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiAuditLogActionAction']>>>
-export type PostApiAuthLoginResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['postApiAuthLogin']>>>
-export type PostApiAuthRefreshResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['postApiAuthRefresh']>>>
-export type PostApiAuthRegisterResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['postApiAuthRegister']>>>
-export type PostApiAuthLogoutResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['postApiAuthLogout']>>>
-export type GetApiAuthMeResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiAuthMe']>>>
-export type GetApiDashboardMetricsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiDashboardMetrics']>>>
-export type GetApiExtensionsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiExtensions']>>>
-export type GetApiExtensionsWidgetsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiExtensionsWidgets']>>>
-export type GetApiExtensionsTabsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiExtensionsTabs']>>>
-export type GetApiExtensionsFormFieldsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiExtensionsFormFields']>>>
-export type GetApiExtensionsHeaderActionsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiExtensionsHeaderActions']>>>
-export type GetApiExtensionsReportsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiExtensionsReports']>>>
-export type GetApiExtensionsSidebarSectionsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiExtensionsSidebarSections']>>>
-export type GetApiExtensionsMenuItemsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiExtensionsMenuItems']>>>
-export type GetApiExtensionsPageResourcesResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiExtensionsPageResources']>>>
-export type PostApiExtensionsRefreshResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['postApiExtensionsRefresh']>>>
-export type GetApiExtensionsSearchResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiExtensionsSearch']>>>
-export type GetApiPluginsPluginIdFrontendManifestJsonResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiPluginsPluginIdFrontendManifestJson']>>>
-export type GetApiPluginsPluginIdFrontendPathResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiPluginsPluginIdFrontendPath']>>>
-export type GetApiHealthResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiHealth']>>>
-export type PostApiPluginsInstallResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['postApiPluginsInstall']>>>
-export type GetApiPluginsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiPlugins']>>>
-export type PostApiPluginsPluginIdEnableResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['postApiPluginsPluginIdEnable']>>>
-export type PostApiPluginsPluginIdDisableResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['postApiPluginsPluginIdDisable']>>>
-export type GetApiRolesResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiRoles']>>>
-export type PostApiRolesResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['postApiRoles']>>>
-export type GetApiRolesIdResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiRolesId']>>>
-export type PutApiRolesIdResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['putApiRolesId']>>>
-export type DeleteApiRolesIdResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['deleteApiRolesId']>>>
-export type GetApiRolesPermissionsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiRolesPermissions']>>>
-export type GetApiRolesIdPermissionsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiRolesIdPermissions']>>>
-export type PostApiRolesIdPermissionsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['postApiRolesIdPermissions']>>>
-export type DeleteApiRolesIdPermissionsPermissionIdResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['deleteApiRolesIdPermissionsPermissionId']>>>
-export type GetApiSettingsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiSettings']>>>
-export type PutApiSettingsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['putApiSettings']>>>
-export type GetApiSettingsCategoriesResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiSettingsCategories']>>>
-export type GetApiSettingsCategoryCategoryResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiSettingsCategoryCategory']>>>
-export type GetApiSettingsKeyResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiSettingsKey']>>>
-export type PutApiSettingsKeyResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['putApiSettingsKey']>>>
-export type GetApiUsersResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiUsers']>>>
-export type PostApiUsersResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['postApiUsers']>>>
-export type GetApiUsersIdResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiUsersId']>>>
-export type PutApiUsersIdResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['putApiUsersId']>>>
-export type DeleteApiUsersIdResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['deleteApiUsersId']>>>
+return {getApiV1AuditLog,getApiV1AuditLogActionAction,postApiV1AuthLogin,postApiV1AuthRefresh,postApiV1AuthRegister,postApiV1AuthLogout,getApiV1AuthMe,getApiV1DashboardMetrics,getApiV1Extensions,getApiV1ExtensionsWidgets,getApiV1ExtensionsTabs,getApiV1ExtensionsFormFields,getApiV1ExtensionsHeaderActions,getApiV1ExtensionsReports,getApiV1ExtensionsSidebarSections,getApiV1ExtensionsMenuItems,getApiV1ExtensionsPageResources,postApiV1ExtensionsRefresh,getApiV1ExtensionsSearch,getApiV1PluginsPluginIdFrontendManifestJson,getApiV1PluginsPluginIdFrontendPath,getApiV1Health,getApiV1Logs,getApiV1LogsLevels,postApiV1PluginsInstall,getApiV1Plugins,getApiV1PluginsPluginIdSettings,putApiV1PluginsPluginIdSettings,postApiV1PluginsPluginIdEnable,postApiV1PluginsPluginIdDisable,getApiV1Roles,postApiV1Roles,getApiV1RolesId,putApiV1RolesId,deleteApiV1RolesId,getApiV1RolesPermissions,getApiV1RolesIdPermissions,postApiV1RolesIdPermissions,deleteApiV1RolesIdPermissionsPermissionId,getApiV1Settings,putApiV1Settings,getApiV1SettingsCategories,getApiV1SettingsCategoryCategory,getApiV1SettingsOptionsCategory,putApiV1SettingsOptionsCategory,getApiV1SettingsKey,putApiV1SettingsKey,getApiV1Users,postApiV1Users,getApiV1UsersId,putApiV1UsersId,deleteApiV1UsersId}};
+export type GetApiV1AuditLogResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiV1AuditLog']>>>
+export type GetApiV1AuditLogActionActionResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiV1AuditLogActionAction']>>>
+export type PostApiV1AuthLoginResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['postApiV1AuthLogin']>>>
+export type PostApiV1AuthRefreshResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['postApiV1AuthRefresh']>>>
+export type PostApiV1AuthRegisterResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['postApiV1AuthRegister']>>>
+export type PostApiV1AuthLogoutResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['postApiV1AuthLogout']>>>
+export type GetApiV1AuthMeResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiV1AuthMe']>>>
+export type GetApiV1DashboardMetricsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiV1DashboardMetrics']>>>
+export type GetApiV1ExtensionsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiV1Extensions']>>>
+export type GetApiV1ExtensionsWidgetsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiV1ExtensionsWidgets']>>>
+export type GetApiV1ExtensionsTabsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiV1ExtensionsTabs']>>>
+export type GetApiV1ExtensionsFormFieldsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiV1ExtensionsFormFields']>>>
+export type GetApiV1ExtensionsHeaderActionsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiV1ExtensionsHeaderActions']>>>
+export type GetApiV1ExtensionsReportsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiV1ExtensionsReports']>>>
+export type GetApiV1ExtensionsSidebarSectionsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiV1ExtensionsSidebarSections']>>>
+export type GetApiV1ExtensionsMenuItemsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiV1ExtensionsMenuItems']>>>
+export type GetApiV1ExtensionsPageResourcesResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiV1ExtensionsPageResources']>>>
+export type PostApiV1ExtensionsRefreshResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['postApiV1ExtensionsRefresh']>>>
+export type GetApiV1ExtensionsSearchResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiV1ExtensionsSearch']>>>
+export type GetApiV1PluginsPluginIdFrontendManifestJsonResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiV1PluginsPluginIdFrontendManifestJson']>>>
+export type GetApiV1PluginsPluginIdFrontendPathResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiV1PluginsPluginIdFrontendPath']>>>
+export type GetApiV1HealthResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiV1Health']>>>
+export type GetApiV1LogsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiV1Logs']>>>
+export type GetApiV1LogsLevelsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiV1LogsLevels']>>>
+export type PostApiV1PluginsInstallResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['postApiV1PluginsInstall']>>>
+export type GetApiV1PluginsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiV1Plugins']>>>
+export type GetApiV1PluginsPluginIdSettingsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiV1PluginsPluginIdSettings']>>>
+export type PutApiV1PluginsPluginIdSettingsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['putApiV1PluginsPluginIdSettings']>>>
+export type PostApiV1PluginsPluginIdEnableResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['postApiV1PluginsPluginIdEnable']>>>
+export type PostApiV1PluginsPluginIdDisableResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['postApiV1PluginsPluginIdDisable']>>>
+export type GetApiV1RolesResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiV1Roles']>>>
+export type PostApiV1RolesResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['postApiV1Roles']>>>
+export type GetApiV1RolesIdResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiV1RolesId']>>>
+export type PutApiV1RolesIdResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['putApiV1RolesId']>>>
+export type DeleteApiV1RolesIdResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['deleteApiV1RolesId']>>>
+export type GetApiV1RolesPermissionsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiV1RolesPermissions']>>>
+export type GetApiV1RolesIdPermissionsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiV1RolesIdPermissions']>>>
+export type PostApiV1RolesIdPermissionsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['postApiV1RolesIdPermissions']>>>
+export type DeleteApiV1RolesIdPermissionsPermissionIdResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['deleteApiV1RolesIdPermissionsPermissionId']>>>
+export type GetApiV1SettingsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiV1Settings']>>>
+export type PutApiV1SettingsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['putApiV1Settings']>>>
+export type GetApiV1SettingsCategoriesResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiV1SettingsCategories']>>>
+export type GetApiV1SettingsCategoryCategoryResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiV1SettingsCategoryCategory']>>>
+export type GetApiV1SettingsOptionsCategoryResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiV1SettingsOptionsCategory']>>>
+export type PutApiV1SettingsOptionsCategoryResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['putApiV1SettingsOptionsCategory']>>>
+export type GetApiV1SettingsKeyResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiV1SettingsKey']>>>
+export type PutApiV1SettingsKeyResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['putApiV1SettingsKey']>>>
+export type GetApiV1UsersResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiV1Users']>>>
+export type PostApiV1UsersResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['postApiV1Users']>>>
+export type GetApiV1UsersIdResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['getApiV1UsersId']>>>
+export type PutApiV1UsersIdResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['putApiV1UsersId']>>>
+export type DeleteApiV1UsersIdResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getAdminShellHostV1>['deleteApiV1UsersId']>>>

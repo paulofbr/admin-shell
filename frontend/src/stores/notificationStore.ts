@@ -1,1 +1,1 @@
-export { useNotificationStore } from '@admin-shell/ui/stores/notificationStore'
+export { useNotificationStore } from '@admin-shell/ui'

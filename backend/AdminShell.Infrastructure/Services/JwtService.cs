@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using AdminShell.Contracts;
 using AdminShell.Core.Entities;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
@@ -44,6 +45,11 @@ public class JwtService : IJwtService
         foreach (var role in user.Roles)
         {
             claims.Add(new Claim(ClaimTypes.Role, role.Name));
+        }
+
+        foreach (var permission in user.Roles.SelectMany(role => role.Permissions).DistinctBy(permission => permission.Code))
+        {
+            claims.Add(new Claim(PermissionClaimTypes.Code, permission.Code));
         }
 
         var expiresAt = DateTime.UtcNow.AddMinutes(expiryMinutes);

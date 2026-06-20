@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import EntityEditor from '@admin-shell/ui/EntityEditor.vue'
 import * as rolesApi from '@/api/roles'
 import type { FormRules } from 'element-plus'
@@ -26,39 +26,37 @@ const emit = defineEmits<{
   saved: [value: Role]
 }>()
 
-const isEditing = ref(false)
-const form = ref<Role>({
-  id: '',
-  name: '',
-  description: '',
-  createdAt: new Date().toISOString(),
-  extensionFields: [],
-})
+const editorRef = ref<InstanceType<typeof EntityEditor>>()
+const isEditing = computed(() => editorRef.value?.isEditing.value ?? false)
+const formModel = computed(() => editorRef.value?.formModel.value as Role)
 const editorTitle = computed(() => (isEditing.value ? 'Edit Role' : 'Add Role'))
+
+function createEmptyRole(): Record<string, unknown> {
+  return {
+    id: '',
+    name: '',
+    description: '',
+    createdAt: new Date().toISOString(),
+    extensionFields: [],
+  }
+}
 
 const formRules: FormRules = {
   name: [{ required: true, message: 'Name is required', trigger: 'blur' }],
 }
 
-watch(
-  () => props.modelValue,
-  (role) => {
-    isEditing.value = !!role
-  },
-  { immediate: true },
-)
-
 async function save() {
-  return isEditing.value && form.value.id
-    ? await rolesApi.updateRole(form.value.id, form.value)
-    : await rolesApi.createRole(form.value)
+  return isEditing.value && (formModel.value.id as string)
+    ? await rolesApi.updateRole(formModel.value.id as string, formModel.value as Role)
+    : await rolesApi.createRole(formModel.value as Parameters<typeof rolesApi.createRole>[0])
 }
 </script>
 
 <template>
   <EntityEditor
-    :source-model="props.modelValue"
-    :form-model="form"
+    ref="editorRef"
+    :model-value="props.modelValue"
+    :empty-model="createEmptyRole"
     :form-rules="formRules"
     :save-success-message="isEditing ? 'Role updated' : 'Role created'"
     save-error-message="Failed to save role"
@@ -70,10 +68,10 @@ async function save() {
     :on-cancel="close"
   >
     <el-form-item label="Name" prop="name">
-      <el-input v-model="form.name" placeholder="e.g. Editor" />
+      <el-input v-model="formModel.name" placeholder="e.g. Editor" />
     </el-form-item>
     <el-form-item label="Description" prop="description">
-      <el-input v-model="form.description" placeholder="Optional description" type="textarea" :rows="2" />
+      <el-input v-model="formModel.description" placeholder="Optional description" type="textarea" :rows="2" />
     </el-form-item>
   </EntityEditor>
 </template>

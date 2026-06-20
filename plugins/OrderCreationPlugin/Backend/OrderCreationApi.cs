@@ -25,6 +25,7 @@ public sealed class OrderCreationApi : IApiPlugin
             logger.LogInformation("GET /api/plugins/{PluginId}/catalog/customers", PluginId);
             return new OkObjectResult(await catalog.GetCustomersAsync(ct));
         })
+        .RequirePermission(OrderCreationPermissions.Read)
         .WithName("GetOrderCustomers")
         .Produces<List<CustomerDto>>(StatusCodes.Status200OK);
 
@@ -33,6 +34,7 @@ public sealed class OrderCreationApi : IApiPlugin
             logger.LogInformation("GET /api/plugins/{PluginId}/catalog/products", PluginId);
             return new OkObjectResult(await catalog.GetProductsAsync(ct));
         })
+        .RequirePermission(OrderCreationPermissions.Read)
         .WithName("GetOrderProducts")
         .Produces<List<ProductDto>>(StatusCodes.Status200OK);
 
@@ -45,6 +47,7 @@ public sealed class OrderCreationApi : IApiPlugin
             logger.LogInformation("GET /api/plugins/{PluginId}/orders page={Page} pageSize={PageSize}", PluginId, page, pageSize);
             return new OkObjectResult(await orders.GetPagedAsync(page, pageSize, ct));
         })
+        .RequirePermission(OrderCreationPermissions.Read)
         .WithName("GetOrders")
         .Produces<PagedOrdersResult>(StatusCodes.Status200OK);
 
@@ -53,6 +56,7 @@ public sealed class OrderCreationApi : IApiPlugin
             logger.LogInformation("GET /api/plugins/{PluginId}/orders/summary", PluginId);
             return new OkObjectResult(await orders.GetSummaryAsync(ct));
         })
+        .RequirePermission(OrderCreationPermissions.Read)
         .WithName("GetOrderSummary")
         .Produces<OrderSummaryDto>(StatusCodes.Status200OK);
 
@@ -77,6 +81,7 @@ public sealed class OrderCreationApi : IApiPlugin
             var order = result.Order ?? throw new InvalidOperationException("Order creation failed without an error payload.");
             return new CreatedResult($"/api/plugins/{PluginId}/orders/{order.Id}", order);
         })
+        .RequirePermission(OrderCreationPermissions.Create)
         .WithName("CreateOrder")
         .Produces<CreateOrderResult>(StatusCodes.Status201Created)
         .Produces<Dictionary<string, string[]>>(StatusCodes.Status400BadRequest);

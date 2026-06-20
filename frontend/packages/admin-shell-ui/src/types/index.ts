@@ -9,6 +9,7 @@ export interface User {
   isActive: boolean;
   createdAt: string;
   roles: Role[];
+  permissions?: Permission[];
   extensionFields?: ExtensionField[];
 }
 
@@ -17,6 +18,7 @@ export interface Role {
   name: string;
   description?: string | null;
   createdAt?: string;
+  permissions?: Permission[];
   extensionFields?: ExtensionField[];
 }
 

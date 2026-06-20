@@ -30,17 +30,17 @@ export async function getUsers(
   take = 10,
   filters?: { email?: string; username?: string; displayName?: string }
 ): Promise<PaginatedResponse<User>> {
-  const response = await api.getApiUsers({ skip, take, ...filters })
+  const response = await api.getApiV1Users({ skip, take, ...filters })
   return response.data as PagedResultOfUserDto as PaginatedResponse<User>
 }
 
 export async function getUserById(id: string): Promise<User> {
-  const response = await api.getApiUsersId(id)
+  const response = await api.getApiV1UsersId(id)
   return response.data as UserDto as User
 }
 
 export async function createUser(data: CreateUserRequest): Promise<User> {
-  const response = await api.postApiUsers({
+  const response = await api.postApiV1Users({
     email: data.email,
     username: data.username,
     password: data.password,
@@ -50,8 +50,8 @@ export async function createUser(data: CreateUserRequest): Promise<User> {
   return response.data as UserDto as User
 }
 
-export async function updateUser(id: string, data: UpdateUserRequest): Promise<User> {
-  const response = await api.putApiUsersId(id, {
+export async function updateUser(data: User): Promise<User> {
+  const response = await api.putApiV1UsersId(data.id, {
     email: data.email ?? null,
     username: data.username ?? null,
     displayName: data.displayName ?? null,
@@ -62,5 +62,5 @@ export async function updateUser(id: string, data: UpdateUserRequest): Promise<U
 }
 
 export async function deleteUser(id: string): Promise<void> {
-  await api.deleteApiUsersId(id)
+  await api.deleteApiV1UsersId(id)
 }

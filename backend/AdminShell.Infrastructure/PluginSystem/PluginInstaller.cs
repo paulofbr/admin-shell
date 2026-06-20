@@ -4,8 +4,10 @@ using System.Text.RegularExpressions;
 using AdminShell.Contracts;
 using AdminShell.Core.Interfaces;
 using AdminShell.Infrastructure.Data;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace AdminShell.Infrastructure.PluginSystem;
 
@@ -18,26 +20,35 @@ public sealed class PluginInstaller : IPluginInstaller
 
     private readonly IPluginLoader _pluginLoader;
     private readonly IPluginExtensionRegistry _extensionRegistry;
+    private readonly ISettingsRegistry _settingsRegistry;
+    private readonly IPermissionDefinitionRegistry _permissionDefinitionRegistry;
     private readonly IManagedEntitySchemaManager _managedEntitySchemaManager;
     private readonly IDbConnectionFactory _connectionFactory;
     private readonly IConfiguration _configuration;
     private readonly ILogger<PluginInstaller> _logger;
+    private readonly IOptions<AuthorizationOptions> _authorizationOptions;
     private readonly string _pluginsDirectory;
 
     public PluginInstaller(
         IPluginLoader pluginLoader,
         IPluginExtensionRegistry extensionRegistry,
+        ISettingsRegistry settingsRegistry,
+        IPermissionDefinitionRegistry permissionDefinitionRegistry,
         IManagedEntitySchemaManager managedEntitySchemaManager,
         IDbConnectionFactory connectionFactory,
         IConfiguration configuration,
-        ILogger<PluginInstaller> logger)
+        ILogger<PluginInstaller> logger,
+        IOptions<AuthorizationOptions> authorizationOptions)
     {
         _pluginLoader = pluginLoader;
         _extensionRegistry = extensionRegistry;
+        _settingsRegistry = settingsRegistry;
+        _permissionDefinitionRegistry = permissionDefinitionRegistry;
         _managedEntitySchemaManager = managedEntitySchemaManager;
         _connectionFactory = connectionFactory;
         _configuration = configuration;
         _logger = logger;
+        _authorizationOptions = authorizationOptions;
         _pluginsDirectory = configuration["Plugins:Directory"] ?? "plugins";
     }
 
@@ -114,9 +125,13 @@ public sealed class PluginInstaller : IPluginInstaller
             }
 
             await _pluginLoader.LoadPluginsAsync(_pluginsDirectory, ct);
+            _permissionDefinitionRegistry.Discover(AppDomain.CurrentDomain.GetAssemblies());
+            EnsureAuthorizationPolicies();
 
             using var db = _connectionFactory.CreateConnection();
             db.Open();
+            await _permissionDefinitionRegistry.EnsurePermissionDefinitionsAsync(db, ct);
+            await _settingsRegistry.EnsureDefaultsAsync(ct);
             await _managedEntitySchemaManager.EnsureAsync(db);
             await _extensionRegistry.ApplyAllMigrationsAsync(db);
 
@@ -178,6 +193,19 @@ public sealed class PluginInstaller : IPluginInstaller
             {
                 _logger.LogDebug(ex, "Failed to delete temporary plugin install directory {Dir}", tempRoot);
             }
+        }
+    }
+
+    private void EnsureAuthorizationPolicies()
+    {
+        var options = _authorizationOptions.Value;
+        foreach (var permission in _permissionDefinitionRegistry.GetAll())
+        {
+            if (options.GetPolicy(permission.PolicyName) is not null)
+                continue;
+
+            options.AddPolicy(permission.PolicyName, policy =>
+                policy.RequireAssertion(context => context.User.HasPermission(permission.Code)));
         }
     }
 

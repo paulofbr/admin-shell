@@ -14,6 +14,8 @@ export interface ResponsiveSize {
 
 type ButtonType = 'primary' | 'success' | 'warning' | 'danger' | 'info' | 'default'
 
+type EmptyModelFactory = () => Record<string, unknown>
+
 
 const props = withDefaults(defineProps<{
   title?: string
@@ -21,6 +23,8 @@ const props = withDefaults(defineProps<{
   eyebrow?: string
   defaultSize?: string | ResponsiveSize
   sourceModel?: unknown
+  modelValue?: unknown
+  emptyModel?: Record<string, unknown> | EmptyModelFactory
   loading?: boolean
   showCancel?: boolean
   showSave?: boolean
@@ -84,35 +88,54 @@ onUnmounted(() => {
 
 const resolvedWidth = computed(() => resolveResponsiveSize(props.defaultSize))
 
+const effectiveSourceModel = computed(() => (
+  props.sourceModel !== undefined ? props.sourceModel : props.modelValue
+))
+
+const internalFormModel = ref<Record<string, unknown>>({})
+const formModel = computed(() => props.formModel ?? internalFormModel.value)
+
 const extensionFields = computed(() => {
-  const formModel = props.formModel as { extensionFields?: ExtensionField[] } | undefined
-  return formModel?.extensionFields ?? []
+  const model = formModel.value as { extensionFields?: ExtensionField[] } | undefined
+  return model?.extensionFields ?? []
 })
+
+const isEditing = computed(() => !!effectiveSourceModel.value)
+
+function resolveEmptyModel(): Record<string, unknown> {
+  if (!props.emptyModel) return {}
+
+  if (typeof props.emptyModel === 'function') {
+    return (props.emptyModel as EmptyModelFactory)()
+  }
+
+  return { ...props.emptyModel }
+}
 
 function createFreshModel(value: unknown): Record<string, unknown> {
   if (value && typeof value === 'object') {
     return { ...(value as Record<string, unknown>) }
   }
 
-  return {}
+  return resolveEmptyModel()
+}
+
+function syncFormModel(value: unknown): void {
+  const target = formModel.value
+  const freshModel = createFreshModel(value)
+
+  Object.keys(target).forEach((key) => {
+    if (!(key in freshModel)) {
+      delete target[key]
+    }
+  })
+
+  Object.assign(target, freshModel)
 }
 
 watch(
-  () => props.sourceModel,
-  (value) => {
-    if (value === undefined) return
-
-    const formModel = props.formModel as Record<string, unknown> | undefined
-    if (!formModel) return
-
-    const freshModel = createFreshModel(value)
-    Object.keys(formModel).forEach((key) => {
-      if (!(key in freshModel)) {
-        delete formModel[key]
-      }
-    })
-    Object.assign(formModel, freshModel)
-  },
+  () => [effectiveSourceModel.value, props.emptyModel],
+  () => syncFormModel(effectiveSourceModel.value),
   { immediate: true },
 )
 
@@ -125,6 +148,8 @@ const emit = defineEmits<{
 const notificationStore = useNotificationStore()
 
 defineExpose({
+  isEditing,
+  formModel,
   submit: handleSave,
 })
 
@@ -152,7 +177,7 @@ async function validateExtensionFields(): Promise<boolean> {
       const validator = new Function('entity', `return (${field.frontEndValidator});`) as (
         entity: unknown
       ) => ValidationResult | Promise<ValidationResult>
-      const result = await validator(props.sourceModel)
+      const result = await validator(formModel.value)
 
       if (result?.ok === false) {
         const message = result.message ?? 'Extension field validation failed'
@@ -191,16 +216,16 @@ async function handleSave(): Promise<void> {
     if (!isValid) return
 
     if (props.saveHandler) {
-      const result = await props.saveHandler(props.sourceModel)
-      const savedValue = result ?? props.sourceModel
-      emit('save', props.sourceModel)
+      const result = await props.saveHandler(formModel.value)
+      const savedValue = result ?? effectiveSourceModel.value
+      emit('save', formModel.value)
       emit('saved', savedValue)
       notifySaveSuccess(savedValue)
       props.close?.()
       return
     }
 
-    emit('save', props.sourceModel)
+    emit('save', formModel.value)
   } catch (error) {
     notifySaveError(error)
   } finally {
@@ -278,7 +303,7 @@ function handleCancel(): void {
       <el-form
         v-if="formModel !== undefined || formRules !== undefined"
         ref="formRef"
-        :model="formModel ?? {}"
+        :model="formModel"
         :rules="formRules"
         :label-position="labelPosition ?? 'top'"
       >

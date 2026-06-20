@@ -6,9 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace AdminShell.Host.Controllers;
 
 [Authorize]
-[ApiController]
-[Route("api/[controller]")]
-public class AuditLogController : ControllerBase
+public class AuditLogController : ApiControllerBase
 {
     private readonly IAuditLogRepository _auditLogRepo;
 

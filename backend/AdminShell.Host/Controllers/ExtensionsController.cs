@@ -14,9 +14,8 @@ public record SearchResultEnvelope(
     string ProviderName
 );
 
-[ApiController]
-[Route("api/extensions")]
-public class ExtensionsController : ControllerBase
+[Route("api/v{version:apiVersion}/extensions")]
+public class ExtensionsController : ApiControllerBase
 {
     private readonly IPluginExtensionRegistry _registry;
 

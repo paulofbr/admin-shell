@@ -16,7 +16,7 @@ export interface LogPage {
 }
 
 export async function getLogLevels(): Promise<string[]> {
-  const response = await authApi.get('/api/logs/levels')
+  const response = await authApi.get('/api/v1/logs/levels')
   return response.data as string[]
 }
 
@@ -26,7 +26,7 @@ export async function getLogs(params: {
   type?: string
   message?: string
 }): Promise<LogPage> {
-  const response = await authApi.get('/api/logs', {
+  const response = await authApi.get('/api/v1/logs', {
     params: {
       skip: params.skip,
       take: params.take,

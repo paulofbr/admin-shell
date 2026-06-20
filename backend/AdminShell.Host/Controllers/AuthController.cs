@@ -6,9 +6,7 @@ using System.Security.Claims;
 
 namespace AdminShell.Host.Controllers;
 
-[ApiController]
-[Route("api/[controller]")]
-public class AuthController : ControllerBase
+public class AuthController : ApiControllerBase
 {
     private readonly IAuthService _authService;
     private readonly IAuditLogService _auditLog;
@@ -105,7 +103,11 @@ public class AuthController : ControllerBase
             user.AvatarUrl,
             user.IsActive,
             user.CreatedAt,
-            Roles = user.Roles.Select(r => new { r.Id, r.Name })
+            Roles = user.Roles.Select(r => new { r.Id, r.Name }),
+            Permissions = user.Roles
+                .SelectMany(role => role.Permissions)
+                .Select(permission => new { permission.Id, permission.Code, permission.Resource, permission.Action, permission.Description })
+                .DistinctBy(permission => permission.Code)
         });
     }
 }

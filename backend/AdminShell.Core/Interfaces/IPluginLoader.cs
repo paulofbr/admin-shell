@@ -10,11 +10,12 @@ public interface IPluginLoader
     IReadOnlyList<IManagedEntityProvider> GetManagedEntityProviders();
     IReadOnlyList<IWidgetPlugin> GetWidgetPlugins();
     IReadOnlyList<IMenuPlugin> GetMenuPlugins();
+    void SetEventBus(IEventBus eventBus);
     EmbeddedFrontendManifest? GetEmbeddedFrontendManifest(string pluginId);
     EmbeddedFrontendAsset? GetEmbeddedFrontendAsset(string pluginId, string path);
     Task LoadPluginsAsync(string pluginsDirectory, CancellationToken ct = default);
     Task<PluginDescriptor?> LoadPluginAsync(string assemblyPath, CancellationToken ct = default);
-    void InitializePlugins(IServiceCollection services, IConfiguration configuration);
+    void InitializePlugins(IServiceCollection services, IConfiguration configuration, IQueryRegistry? queryRegistry = null);
     void ConfigurePlugins(IApplicationBuilder app, IWebHostEnvironment env);
     void MapPluginEndpoints(IApplicationBuilder app);
     void RefreshPluginEndpoints();

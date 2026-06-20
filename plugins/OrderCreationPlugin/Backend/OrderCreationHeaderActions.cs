@@ -16,7 +16,7 @@ public sealed class OrderCreationHeaderActions : IHeaderActionPlugin
             ActionType = "route",
             ActionValue = "/orders/create",
             Order = 5,
-            RequiredPermissions = new[] { "orders:create" }
+            RequiredPermissions = [OrderCreationPermissions.Create]
         };
     }
 }

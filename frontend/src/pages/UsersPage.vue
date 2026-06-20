@@ -3,7 +3,7 @@
     <ResponsiveGrid
       ref="gridRef"
       :columns="gridColumns"
-      :filters="gridFilters"
+      :plugin-columns="pluginStore.tableColumns"
       :edit-mode="'popup'"
       editable
       deletable
@@ -13,19 +13,18 @@
       :delete-confirm-message="(row) => `Delete user ${(row as unknown as User).email ?? (row as unknown as User).username ?? ''}?`"
       :on-delete="handleDelete"
       empty-text="No users"
-      @filter-change="handleFilterChange"
     >
       <template #toolbar>
-        <el-button :icon="Refresh" round @click="gridRef?.refresh()" :loading="gridRef?.isLoading">
+        <el-button :icon="Refresh" round @click="gridRef?.refresh" :loading="gridRef?.isLoading">
           Refresh
         </el-button>
-        <el-button type="primary" :icon="Plus" round @click="openCreateDialog">
+        <el-button type="primary" :icon="Plus" round @click="gridRef?.refresh">
           Add User
         </el-button>
         <HeaderActions target="page.toolbar" target-page="users" />
       </template>
 
-      <template #cell-user="{ row }">
+      <template #cell-email="{ row }">
         <div style="display: flex; align-items: center; gap: 10px">
           <el-avatar :size="32" :src="(row as unknown as User).avatarUrl">
             {{ getUserInitial(row as unknown as User) }}
@@ -39,14 +38,6 @@
 
       <template #cell-username="{ value }">
         {{ value ?? '—' }}
-      </template>
-
-      <template
-        v-for="col in pluginTableColumns"
-        :key="`plugin-${col.id}`"
-        #[`cell-${col.id}`]="{ row }"
-      >
-        <span v-html="col.render(row as any)" />
       </template>
 
       <template #cell-roles="{ row }">
@@ -86,7 +77,7 @@ import HeaderActions from '@/components/common/HeaderActions.vue'
 import UserEntityEditor from '@/components/users/UserEntityEditor.vue'
 import ListViewer from '@admin-shell/ui/ListViewer.vue'
 import ResponsiveGrid from '@admin-shell/ui/ResponsiveGrid.vue'
-import type { GridColumn, GridFilter, GridLoadQuery, GridRow } from '@admin-shell/ui/types'
+import type { GridColumn, GridDataLoader, GridLoadQuery, GridRow } from '@admin-shell/ui/types'
 import { useNotificationStore } from '@/stores/notificationStore'
 import eventBus from '@admin-shell/ui/event-bus'
 import * as usersApi from '@/api/users'
@@ -98,65 +89,53 @@ const notificationStore = useNotificationStore()
 
 const gridRef = ref<InstanceType<typeof ResponsiveGrid>>()
 
-// Inline column filters
-const filters = ref({
-  email: '',
-  username: '',
-  displayName: '',
-})
-
 function getUserInitial(user: User): string {
   const displayName = user.displayName?.trim()
   const username = user.username?.trim()
   return (displayName ?? username ?? '?')[0]?.toUpperCase() ?? '?'
 }
 
-const gridFilters: GridFilter[] = [
-  { id: 'email', label: 'Email', type: 'text', placeholder: 'Filter email' },
-  { id: 'username', label: 'Username', type: 'text', placeholder: 'Filter username' },
-  { id: 'displayName', label: 'Display Name', type: 'text', placeholder: 'Filter name' },
-]
+type UserFilters = Record<string, string | null | undefined>
 
-function handleFilterChange(payload: { id: string; value: unknown }) {
-  const value = payload.value === null || payload.value === undefined ? '' : String(payload.value)
-  filters.value = {
-    ...filters.value,
-    [payload.id]: value,
-  }
-}
-
-// Plugin contributions
-const pluginTableColumns = computed(() => pluginStore.tableColumns)
-
-const gridColumns = computed<GridColumn[]>(() => [
-  { id: 'user', label: 'User', minWidth: '220' },
-  { id: 'username', label: 'Username', prop: 'username', width: '130' },
-  ...pluginTableColumns.value.map((col) => ({
-    id: col.id,
-    label: col.label,
-    width: col.width,
-  })),
+const gridColumns = computed<GridColumn<User>[]>(() => [
+  {
+    id: 'email',
+    label: 'User',
+    prop: 'email',
+    minWidth: '220',
+    filter: { type: 'text', placeholder: 'Filter email' },
+  },
+  {
+    id: 'username',
+    label: 'Username',
+    prop: 'username',
+    width: '130',
+    filter: { type: 'text', placeholder: 'Filter username' },
+  },
+  {
+    id: 'displayName',
+    label: 'Display Name',
+    prop: 'displayName',
+    width: '160',
+    filter: { type: 'text', placeholder: 'Filter name' },
+  },
   { id: 'roles', label: 'Roles', width: '180' },
   { id: 'active', label: 'Active', prop: 'isActive', width: '80' },
   { id: 'created', label: 'Created', width: '120' },
   { id: 'actions', label: 'Actions', width: '120', fixed: 'right' },
 ])
 
-const pluginFilters = computed(() =>
-  pluginStore.tableColumns
-    .filter((col) => col.filterType && col.filterType !== 'none' && col.filterOptions)
-    .map((col) => ({
-      id: col.id,
-      label: col.label,
-      type: col.filterType as string,
-      options: col.filterOptions ?? [],
-      value: null as string | null,
-    }))
-)
+function openCreateDialog(): void {
+  gridRef.value?.openEditor(null)
+}
+
+async function getUserEditorModel(_key: unknown, row: GridRow): Promise<User> {
+  return usersApi.getUserById(String(row.id))
+}
 
 async function toggleActive(user: User) {
   try {
-    await usersApi.updateUser(user.id, { isActive: !(user.isActive ?? true) })
+    await usersApi.updateUser({ ...user, isActive: !(user.isActive ?? true) })
     notificationStore.addNotification(
       `User ${(user.isActive ?? true) ? 'deactivated' : 'activated'} successfully`,
       'success'
@@ -168,12 +147,21 @@ async function toggleActive(user: User) {
   }
 }
 
-async function loadUsers(query: GridLoadQuery): Promise<{ data: User[]; total: number }> {
-  const result = await usersApi.getUsers(query.skip, query.pageSize, {
+const loadUsers: GridDataLoader<User, UserFilters> = async (query) => {
+  const apiFilters: Record<string, string | undefined> = {
     email: stringFilter(query.filters.email),
     username: stringFilter(query.filters.username),
     displayName: stringFilter(query.filters.displayName),
-  })
+  }
+
+  for (const column of pluginStore.tableColumns) {
+    if (!column.filterType || column.filterType === 'none' || !column.filterOptions) continue
+
+    const value = stringFilter(query.filters[column.id])
+    if (value) apiFilters[column.id] = value
+  }
+
+  const result = await usersApi.getUsers(query.skip, query.pageSize, apiFilters)
 
   // Notify plugins that users are loaded (they can fetch additional data)
   eventBus.publish('users:loaded', result.data)
@@ -194,29 +182,3 @@ async function handleDelete(row: GridRow): Promise<void> {
   await usersApi.deleteUser(user.id)
 }
 </script>
-
-<style scoped>
-.users-filters {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 16px;
-  flex-wrap: wrap;
-}
-
-.users-filters__item {
-  min-width: 180px;
-}
-
-@media (max-width: 768px) {
-  .users-filters {
-    flex-direction: column;
-    gap: 8px;
-    width: 100%;
-  }
-
-  .users-filters__item {
-    width: 100%;
-    min-width: auto;
-  }
-}
-</style>

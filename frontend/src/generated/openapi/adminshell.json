@@ -10,268 +10,7 @@
     }
   ],
   "paths": {
-    "/api/plugins/user-department/departments": {
-      "get": {
-        "tags": [
-          "AdminShell.Host"
-        ],
-        "operationId": "GetDepartments",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/plugins/user-department/users/{userId}/department": {
-      "get": {
-        "tags": [
-          "AdminShell.Host"
-        ],
-        "operationId": "GetUserDepartment",
-        "parameters": [
-          {
-            "name": "userId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      },
-      "put": {
-        "tags": [
-          "AdminShell.Host"
-        ],
-        "operationId": "SetUserDepartment",
-        "parameters": [
-          {
-            "name": "userId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DepartmentAssignmentRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/plugins/reporting/reports": {
-      "get": {
-        "tags": [
-          "AdminShell.Host"
-        ],
-        "operationId": "GetReports",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/plugins/reporting/widgets/summary": {
-      "get": {
-        "tags": [
-          "AdminShell.Host"
-        ],
-        "operationId": "GetWidgetSummary",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/plugins/reporting/reports/generate/{reportId}": {
-      "get": {
-        "tags": [
-          "AdminShell.Host"
-        ],
-        "operationId": "GenerateReport",
-        "parameters": [
-          {
-            "name": "reportId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "format",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/plugins/order-creation/catalog/customers": {
-      "get": {
-        "tags": [
-          "AdminShell.Host"
-        ],
-        "operationId": "GetOrderCustomers",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/OkObjectResult"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/plugins/order-creation/catalog/products": {
-      "get": {
-        "tags": [
-          "AdminShell.Host"
-        ],
-        "operationId": "GetOrderProducts",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/OkObjectResult"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/plugins/order-creation/orders": {
-      "get": {
-        "tags": [
-          "AdminShell.Host"
-        ],
-        "operationId": "GetOrders",
-        "parameters": [
-          {
-            "name": "page",
-            "in": "query",
-            "schema": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
-              "type": [
-                "integer",
-                "string"
-              ],
-              "format": "int32",
-              "default": 1
-            }
-          },
-          {
-            "name": "pageSize",
-            "in": "query",
-            "schema": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
-              "type": [
-                "integer",
-                "string"
-              ],
-              "format": "int32",
-              "default": 20
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/OkObjectResult"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "AdminShell.Host"
-        ],
-        "operationId": "CreateOrder",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateOrderRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ObjectResult"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/plugins/order-creation/orders/summary": {
-      "get": {
-        "tags": [
-          "AdminShell.Host"
-        ],
-        "operationId": "GetOrderSummary",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/OkObjectResult"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/AuditLog": {
+    "/api/v1/AuditLog": {
       "get": {
         "tags": [
           "AuditLog"
@@ -328,7 +67,7 @@
         }
       }
     },
-    "/api/AuditLog/action/{action}": {
+    "/api/v1/AuditLog/action/{action}": {
       "get": {
         "tags": [
           "AuditLog"
@@ -393,7 +132,7 @@
         }
       }
     },
-    "/api/Auth/login": {
+    "/api/v1/Auth/login": {
       "post": {
         "tags": [
           "Auth"
@@ -442,7 +181,7 @@
         }
       }
     },
-    "/api/Auth/refresh": {
+    "/api/v1/Auth/refresh": {
       "post": {
         "tags": [
           "Auth"
@@ -491,7 +230,7 @@
         }
       }
     },
-    "/api/Auth/register": {
+    "/api/v1/Auth/register": {
       "post": {
         "tags": [
           "Auth"
@@ -540,7 +279,7 @@
         }
       }
     },
-    "/api/Auth/logout": {
+    "/api/v1/Auth/logout": {
       "post": {
         "tags": [
           "Auth"
@@ -569,7 +308,7 @@
         }
       }
     },
-    "/api/Auth/me": {
+    "/api/v1/Auth/me": {
       "get": {
         "tags": [
           "Auth"
@@ -598,7 +337,7 @@
         }
       }
     },
-    "/api/dashboard/metrics": {
+    "/api/v1/dashboard/metrics": {
       "get": {
         "tags": [
           "Dashboard"
@@ -627,7 +366,7 @@
         }
       }
     },
-    "/api/extensions": {
+    "/api/v1/extensions": {
       "get": {
         "tags": [
           "Extensions"
@@ -656,7 +395,7 @@
         }
       }
     },
-    "/api/extensions/widgets": {
+    "/api/v1/extensions/widgets": {
       "get": {
         "tags": [
           "Extensions"
@@ -694,7 +433,7 @@
         }
       }
     },
-    "/api/extensions/tabs": {
+    "/api/v1/extensions/tabs": {
       "get": {
         "tags": [
           "Extensions"
@@ -732,7 +471,7 @@
         }
       }
     },
-    "/api/extensions/form-fields": {
+    "/api/v1/extensions/form-fields": {
       "get": {
         "tags": [
           "Extensions"
@@ -770,7 +509,7 @@
         }
       }
     },
-    "/api/extensions/header-actions": {
+    "/api/v1/extensions/header-actions": {
       "get": {
         "tags": [
           "Extensions"
@@ -808,7 +547,7 @@
         }
       }
     },
-    "/api/extensions/reports": {
+    "/api/v1/extensions/reports": {
       "get": {
         "tags": [
           "Extensions"
@@ -846,7 +585,7 @@
         }
       }
     },
-    "/api/extensions/sidebar-sections": {
+    "/api/v1/extensions/sidebar-sections": {
       "get": {
         "tags": [
           "Extensions"
@@ -884,7 +623,7 @@
         }
       }
     },
-    "/api/extensions/menu-items": {
+    "/api/v1/extensions/menu-items": {
       "get": {
         "tags": [
           "Extensions"
@@ -922,7 +661,7 @@
         }
       }
     },
-    "/api/extensions/page-resources": {
+    "/api/v1/extensions/page-resources": {
       "get": {
         "tags": [
           "Extensions"
@@ -960,7 +699,7 @@
         }
       }
     },
-    "/api/extensions/refresh": {
+    "/api/v1/extensions/refresh": {
       "post": {
         "tags": [
           "Extensions"
@@ -989,7 +728,7 @@
         }
       }
     },
-    "/api/extensions/search": {
+    "/api/v1/extensions/search": {
       "get": {
         "tags": [
           "Extensions"
@@ -1049,7 +788,7 @@
         }
       }
     },
-    "/api/plugins/{pluginId}/frontend/manifest.json": {
+    "/api/v1/plugins/{pluginId}/frontend/manifest.json": {
       "get": {
         "tags": [
           "FrontendPlugins"
@@ -1088,7 +827,7 @@
         }
       }
     },
-    "/api/plugins/{pluginId}/frontend/{path}": {
+    "/api/v1/plugins/{pluginId}/frontend/{path}": {
       "get": {
         "tags": [
           "FrontendPlugins"
@@ -1118,7 +857,7 @@
         }
       }
     },
-    "/api/Health": {
+    "/api/v1/Health": {
       "get": {
         "tags": [
           "Health"
@@ -1147,7 +886,116 @@
         }
       }
     },
-    "/api/plugins/install": {
+    "/api/v1/Logs": {
+      "get": {
+        "tags": [
+          "Logs"
+        ],
+        "parameters": [
+          {
+            "name": "skip",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32",
+              "default": 0
+            }
+          },
+          {
+            "name": "take",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32",
+              "default": 50
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "message",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/LogFilePageDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LogFilePageDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LogFilePageDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/Logs/levels": {
+      "get": {
+        "tags": [
+          "Logs"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/plugins/install": {
       "post": {
         "tags": [
           "PluginAdmin"
@@ -1205,7 +1053,7 @@
         }
       }
     },
-    "/api/plugins": {
+    "/api/v1/plugins": {
       "get": {
         "tags": [
           "PluginAdmin"
@@ -1243,7 +1091,112 @@
         }
       }
     },
-    "/api/plugins/{pluginId}/enable": {
+    "/api/v1/plugins/{pluginId}/settings": {
+      "get": {
+        "tags": [
+          "PluginAdmin"
+        ],
+        "parameters": [
+          {
+            "name": "pluginId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "PluginAdmin"
+        ],
+        "parameters": [
+          {
+            "name": "pluginId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UpdateSettingRequest"
+                }
+              }
+            },
+            "text/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UpdateSettingRequest"
+                }
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UpdateSettingRequest"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/plugins/{pluginId}/enable": {
       "post": {
         "tags": [
           "PluginAdmin"
@@ -1282,7 +1235,7 @@
         }
       }
     },
-    "/api/plugins/{pluginId}/disable": {
+    "/api/v1/plugins/{pluginId}/disable": {
       "post": {
         "tags": [
           "PluginAdmin"
@@ -1321,7 +1274,7 @@
         }
       }
     },
-    "/api/Roles": {
+    "/api/v1/Roles": {
       "get": {
         "tags": [
           "Roles"
@@ -1406,7 +1359,7 @@
         }
       }
     },
-    "/api/Roles/{id}": {
+    "/api/v1/Roles/{id}": {
       "get": {
         "tags": [
           "Roles"
@@ -1525,7 +1478,7 @@
         }
       }
     },
-    "/api/Roles/permissions": {
+    "/api/v1/Roles/permissions": {
       "get": {
         "tags": [
           "Roles"
@@ -1563,7 +1516,7 @@
         }
       }
     },
-    "/api/Roles/{id}/permissions": {
+    "/api/v1/Roles/{id}/permissions": {
       "get": {
         "tags": [
           "Roles"
@@ -1661,7 +1614,7 @@
         }
       }
     },
-    "/api/Roles/{id}/permissions/{permissionId}": {
+    "/api/v1/Roles/{id}/permissions/{permissionId}": {
       "delete": {
         "tags": [
           "Roles"
@@ -1693,7 +1646,7 @@
         }
       }
     },
-    "/api/Settings": {
+    "/api/v1/Settings": {
       "get": {
         "tags": [
           "Settings"
@@ -1787,7 +1740,7 @@
         }
       }
     },
-    "/api/Settings/categories": {
+    "/api/v1/Settings/categories": {
       "get": {
         "tags": [
           "Settings"
@@ -1825,7 +1778,7 @@
         }
       }
     },
-    "/api/Settings/category/{category}": {
+    "/api/v1/Settings/category/{category}": {
       "get": {
         "tags": [
           "Settings"
@@ -1873,7 +1826,112 @@
         }
       }
     },
-    "/api/Settings/{key}": {
+    "/api/v1/Settings/options/{category}": {
+      "get": {
+        "tags": [
+          "Settings"
+        ],
+        "parameters": [
+          {
+            "name": "category",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Settings"
+        ],
+        "parameters": [
+          {
+            "name": "category",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UpdateSettingRequest"
+                }
+              }
+            },
+            "text/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UpdateSettingRequest"
+                }
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UpdateSettingRequest"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/Settings/{key}": {
       "get": {
         "tags": [
           "Settings"
@@ -1969,7 +2027,7 @@
         }
       }
     },
-    "/api/Users": {
+    "/api/v1/Users": {
       "get": {
         "tags": [
           "Users"
@@ -2094,7 +2152,7 @@
         }
       }
     },
-    "/api/Users/{id}": {
+    "/api/v1/Users/{id}": {
       "get": {
         "tags": [
           "Users"
@@ -2324,85 +2382,6 @@
           }
         }
       },
-      "CreateOrderLineRequest": {
-        "required": [
-          "productId",
-          "quantity",
-          "discountPercent"
-        ],
-        "type": "object",
-        "properties": {
-          "productId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "quantity": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "discountPercent": {
-            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
-            "type": [
-              "null",
-              "number",
-              "string"
-            ],
-            "format": "double"
-          }
-        }
-      },
-      "CreateOrderRequest": {
-        "required": [
-          "customerId",
-          "poNumber",
-          "notes",
-          "requestedDeliveryDate",
-          "shippingAddress",
-          "paymentMethod",
-          "lines"
-        ],
-        "type": "object",
-        "properties": {
-          "customerId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "poNumber": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "notes": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "requestedDeliveryDate": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "shippingAddress": {
-            "$ref": "#/components/schemas/ShippingAddressRequest"
-          },
-          "paymentMethod": {
-            "type": "string"
-          },
-          "lines": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/CreateOrderLineRequest"
-            }
-          }
-        }
-      },
       "CreateRoleRequest": {
         "required": [
           "name",
@@ -2418,6 +2397,15 @@
               "null",
               "string"
             ]
+          },
+          "extensionFields": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ExtensionField"
+            }
           }
         }
       },
@@ -2444,6 +2432,15 @@
               "null",
               "string"
             ]
+          },
+          "extensionFields": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ExtensionField"
+            }
           }
         }
       },
@@ -2593,17 +2590,6 @@
           }
         }
       },
-      "DepartmentAssignmentRequest": {
-        "required": [
-          "departmentId"
-        ],
-        "type": "object",
-        "properties": {
-          "departmentId": {
-            "type": "string"
-          }
-        }
-      },
       "EmbeddedFrontendManifest": {
         "type": "object",
         "properties": {
@@ -2644,6 +2630,44 @@
             "items": {
               "$ref": "#/components/schemas/PluginDependencyDescriptor"
             }
+          }
+        }
+      },
+      "ExtensionField": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "value": { },
+          "type": {
+            "type": "string"
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "defaultValue": { },
+          "label": {
+            "type": "string"
+          },
+          "possibleValues": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/FieldPossibleValues"
+              }
+            ]
+          },
+          "frontEndValidator": {
+            "type": "string"
+          },
+          "slot": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -2707,6 +2731,32 @@
             "items": {
               "$ref": "#/components/schemas/PageResourceDescriptor"
             }
+          }
+        }
+      },
+      "FieldPossibleValues": {
+        "type": "object",
+        "properties": {
+          "values": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "enumName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "uri": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -2938,8 +2988,75 @@
         "type": "string",
         "format": "binary"
       },
-      "IOutputFormatter": {
-        "type": "object"
+      "LogEntryDto": {
+        "required": [
+          "timestamp",
+          "level",
+          "source",
+          "message",
+          "exception"
+        ],
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "level": {
+            "type": "string"
+          },
+          "source": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "exception": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "LogFilePageDto": {
+        "required": [
+          "data",
+          "hasMore",
+          "scannedBytes",
+          "warning"
+        ],
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LogEntryDto"
+            }
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "scannedBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "warning": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
       },
       "LoginRequest": {
         "required": [
@@ -3055,86 +3172,6 @@
           "count": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          }
-        }
-      },
-      "ObjectResult": {
-        "required": [
-          "value"
-        ],
-        "type": "object",
-        "properties": {
-          "value": { },
-          "formatters": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/IOutputFormatter"
-            }
-          },
-          "contentTypes": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "declaredType": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/Type"
-              }
-            ]
-          },
-          "statusCode": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "null",
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          }
-        }
-      },
-      "OkObjectResult": {
-        "required": [
-          "value"
-        ],
-        "type": "object",
-        "properties": {
-          "value": { },
-          "formatters": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/IOutputFormatter"
-            }
-          },
-          "contentTypes": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "declaredType": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/Type"
-              }
-            ]
-          },
-          "statusCode": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "null",
               "integer",
               "string"
             ],
@@ -3548,6 +3585,12 @@
           "createdAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "extensionFields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExtensionField"
+            }
           }
         }
       },
@@ -3694,28 +3737,91 @@
           }
         }
       },
-      "ShippingAddressRequest": {
+      "SettingOptionDto": {
         "required": [
-          "street",
-          "city",
-          "postalCode",
-          "country"
+          "key",
+          "name",
+          "label",
+          "description",
+          "type",
+          "value",
+          "defaultValue",
+          "required",
+          "order",
+          "validator"
         ],
         "type": "object",
         "properties": {
-          "street": {
+          "key": {
             "type": "string"
           },
-          "city": {
+          "name": {
             "type": "string"
           },
-          "postalCode": {
+          "label": {
             "type": "string"
           },
-          "country": {
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "type": {
+            "$ref": "#/components/schemas/SettingType"
+          },
+          "value": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "defaultValue": {
             "type": "string"
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "order": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "validator": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
+      },
+      "SettingsResponse": {
+        "required": [
+          "category",
+          "name",
+          "settings"
+        ],
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "settings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SettingOptionDto"
+            }
+          }
+        }
+      },
+      "SettingType": {
+        "type": "integer"
       },
       "SidebarMenuItem": {
         "type": "object",
@@ -3840,7 +3946,6 @@
           }
         }
       },
-      "Type": { },
       "UpdateRoleRequest": {
         "required": [
           "name",
@@ -3859,6 +3964,15 @@
               "null",
               "string"
             ]
+          },
+          "extensionFields": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ExtensionField"
+            }
           }
         }
       },
@@ -3909,6 +4023,15 @@
               "null",
               "boolean"
             ]
+          },
+          "extensionFields": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ExtensionField"
+            }
           }
         }
       },
@@ -3945,6 +4068,12 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/RoleDto"
+            }
+          },
+          "extensionFields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExtensionField"
             }
           }
         }
@@ -4016,9 +4145,6 @@
   ],
   "tags": [
     {
-      "name": "AdminShell.Host"
-    },
-    {
       "name": "AuditLog"
     },
     {
@@ -4035,6 +4161,9 @@
     },
     {
       "name": "Health"
+    },
+    {
+      "name": "Logs"
     },
     {
       "name": "PluginAdmin"

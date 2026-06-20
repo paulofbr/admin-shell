@@ -26,7 +26,10 @@ public class RoleRepository : IRoleRepository
             "SELECT * FROM Roles WHERE Id = @Id AND IsDeleted = 0",
             new { Id = id });
         if (role is not null)
+        {
+            role.Permissions = await GetRolePermissionsAsync(db, id, ct);
             await HydrateExtensionFieldsAsync(db, role, ct);
+        }
         return role;
     }
 
@@ -38,7 +41,10 @@ public class RoleRepository : IRoleRepository
             "SELECT * FROM Roles WHERE Name = @Name AND IsDeleted = 0",
             new { Name = name });
         if (role is not null)
+        {
+            role.Permissions = await GetRolePermissionsAsync(db, role.Id, ct);
             await HydrateExtensionFieldsAsync(db, role, ct);
+        }
         return role;
     }
 
@@ -49,7 +55,10 @@ public class RoleRepository : IRoleRepository
         var roles = (await db.QueryAsync<Role>(
             "SELECT * FROM Roles WHERE IsDeleted = 0 ORDER BY Name")).ToList();
         foreach (var role in roles)
+        {
+            role.Permissions = await GetRolePermissionsAsync(db, role.Id, ct);
             await HydrateExtensionFieldsAsync(db, role, ct);
+        }
         return roles;
     }
 
@@ -111,6 +120,19 @@ public class RoleRepository : IRoleRepository
         await db.ExecuteAsync(
             "UPDATE Roles SET IsDeleted = 1, DeletedAt = @DeletedAt WHERE Id = @Id",
             new { role.Id, DeletedAt = DateTime.UtcNow });
+    }
+
+    private static async Task<List<Permission>> GetRolePermissionsAsync(System.Data.IDbConnection db, Guid roleId, CancellationToken ct)
+    {
+        var permissions = await db.QueryAsync<Permission>(
+            @"SELECT p.Id, p.Code, p.Resource, p.Action, p.Description,
+                     p.IsDeleted, p.DeletedAt, p.CreatedAt, p.CreatedBy
+              FROM Permissions p
+              INNER JOIN RolePermissions ON p.Id = RolePermissions.PermissionId
+              WHERE RolePermissions.RoleId = @RoleId AND p.IsDeleted = 0
+              ORDER BY p.Resource, p.Action",
+            new { RoleId = roleId });
+        return permissions.ToList();
     }
 
     private async Task HydrateExtensionFieldsAsync(System.Data.IDbConnection db, Role role, CancellationToken ct)

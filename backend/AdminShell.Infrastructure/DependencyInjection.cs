@@ -4,6 +4,7 @@ using AdminShell.Infrastructure.Data;
 using AdminShell.Infrastructure.Data.Repositories;
 using AdminShell.Infrastructure.PluginSystem;
 using AdminShell.Infrastructure.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -37,15 +38,34 @@ public static class DependencyInjection
         services.AddScoped<IAuditLogRepository, AuditLogRepository>();
 
         // Services
+        services.AddSingleton<ICacheService, CacheService>();
         services.AddScoped<IJwtService, JwtService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IAuditLogService, AuditLogService>();
         services.AddScoped<IUserService, UserService>();
         services.AddSingleton<IPluginLoader, PluginLoader>();
         services.AddSingleton<IPluginInstaller, PluginInstaller>();
+        services.AddSingleton<IPermissionDefinitionRegistry>(sp =>
+        {
+            var registry = new PermissionDefinitionRegistry();
+            registry.Discover(AppDomain.CurrentDomain.GetAssemblies());
+            return registry;
+        });
         services.AddSingleton<IHealthCheckService, HealthCheckService>();
         services.AddSingleton<IQueryRegistry, PluginQueryRegistry>();
         services.AddHostedService<PluginWatcher>();
+        services.AddOptions<AuthorizationOptions>()
+            .Configure<IPermissionDefinitionRegistry>((options, registry) =>
+            {
+                foreach (var permission in registry.GetAll())
+                {
+                    if (options.GetPolicy(permission.PolicyName) is not null)
+                        continue;
+
+                    options.AddPolicy(permission.PolicyName, policy =>
+                        policy.RequireAssertion(context => context.User.HasPermission(permission.Code)));
+                }
+            });
 
         // Plugin Extension Registry
         services.AddSingleton<IPluginExtensionRegistry>(sp =>
@@ -58,6 +78,19 @@ public static class DependencyInjection
             // Wrap in a lazy-resolving collection since DI plugins may not be registered yet
             return new PluginExtensionRegistry(components, logger, pluginLoader);
         });
+
+        services.AddSingleton<ISettingsRegistry>(sp =>
+        {
+            var pluginLoader = sp.GetRequiredService<IPluginLoader>();
+            var connectionFactory = sp.GetRequiredService<IDbConnectionFactory>();
+            var logger = sp.GetRequiredService<ILogger<SettingsRegistry>>();
+            return new SettingsRegistry(connectionFactory, logger, pluginLoader);
+        });
+        services.AddScoped(typeof(ISettingsAccessor<>), typeof(SettingsAccessor<>));
+
+        // Health checks
+        services.AddHealthChecks()
+            .AddCheck<DatabaseHealthCheck>("database", tags: ["db", "core"]);
 
         return services;
     }

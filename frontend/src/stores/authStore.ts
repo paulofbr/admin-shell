@@ -38,6 +38,18 @@ export const useAuthStore = defineStore('auth', {
     isAuthenticated: false,
     isLoading: true,
   }),
+  getters: {
+    permissions: (state): string[] => {
+      const perms = state.user?.permissions ?? state.user?.roles?.flatMap(r => r.permissions ?? []) ?? []
+      return perms.map(p => p.code)
+    },
+    hasPermission: (state) => {
+      return (permission: string) => {
+        const perms = state.user?.permissions ?? state.user?.roles?.flatMap(r => r.permissions ?? []) ?? []
+        return perms.some(p => p.code === permission)
+      }
+    },
+  },
   actions: {
     async login(email: string, password: string) {
       const result = await authApi.login(email, password)

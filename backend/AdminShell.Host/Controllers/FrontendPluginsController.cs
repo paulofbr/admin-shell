@@ -5,9 +5,8 @@ using Microsoft.Extensions.Configuration;
 
 namespace AdminShell.Host.Controllers;
 
-[ApiController]
-[Route("api/plugins/{pluginId}/frontend")]
-public class FrontendPluginsController : ControllerBase
+[Route("api/v{version:apiVersion}/plugins/{pluginId}/frontend")]
+public class FrontendPluginsController : ApiControllerBase
 {
     private readonly IPluginLoader _pluginLoader;
     private readonly IConfiguration _configuration;

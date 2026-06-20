@@ -1,13 +1,19 @@
+using AdminShell.Contracts;
+
 namespace OrderCreationPlugin;
 
 public sealed class InMemoryOrderService : IOrderService
 {
     private readonly IOrderCatalogService _catalog;
+    private readonly ISettingsAccessor<OrderCreationSettings> _settings;
     private readonly List<OrderDto> _orders = new();
 
-    public InMemoryOrderService(IOrderCatalogService catalog)
+    public InMemoryOrderService(
+        IOrderCatalogService catalog,
+        ISettingsAccessor<OrderCreationSettings> settings)
     {
         _catalog = catalog;
+        _settings = settings;
     }
 
     public async Task<PagedOrdersResult> GetPagedAsync(int page, int pageSize, CancellationToken ct = default)
@@ -58,6 +64,7 @@ public sealed class InMemoryOrderService : IOrderService
 
     public async Task<CreateOrderResult> CreateAsync(CreateOrderRequest request, CancellationToken ct = default)
     {
+        var settings = await _settings.GetAsync(ct);
         var customers = await _catalog.GetCustomersAsync(ct);
         var products = await _catalog.GetProductsAsync(ct);
 
@@ -75,6 +82,14 @@ public sealed class InMemoryOrderService : IOrderService
             return CreateOrderResult.Invalid(new Dictionary<string, string[]>
             {
                 ["lines"] = new[] { "A encomenda deve ter pelo menos uma linha." }
+            });
+        }
+
+        if (request.Lines.Count > settings.MaxItemsPerOrder)
+        {
+            return CreateOrderResult.Invalid(new Dictionary<string, string[]>
+            {
+                ["lines"] = new[] { $"A encomenda pode ter no máximo {settings.MaxItemsPerOrder} linhas." }
             });
         }
 
@@ -96,7 +111,7 @@ public sealed class InMemoryOrderService : IOrderService
                 continue;
             }
 
-            if (requestLine.Quantity > product.Stock)
+            if (settings.EnableInventoryCheck && requestLine.Quantity > product.Stock)
             {
                 AddError(errors, $"lines[{lines.Count}].quantity", $"Stock insuficiente. Disponível: {product.Stock}.");
                 continue;

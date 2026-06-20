@@ -32,7 +32,7 @@ export async function login(
   email: string,
   password: string,
 ): Promise<LoginResult> {
-  const response = await api.postApiAuthLogin({ email, password } satisfies LoginRequest)
+  const response = await api.postApiV1AuthLogin({ email, password } satisfies LoginRequest)
   return response.data as LoginResult
 }
 
@@ -42,7 +42,7 @@ export async function register(
   password: string,
   displayName?: string,
 ): Promise<LoginResult> {
-  const response = await api.postApiAuthRegister({ email, username, password, displayName: displayName ?? null } satisfies RegisterRequest)
+  const response = await api.postApiV1AuthRegister({ email, username, password, displayName: displayName ?? null } satisfies RegisterRequest)
   return response.data as LoginResult
 }
 
@@ -50,15 +50,15 @@ export async function refresh(
   accessToken: string,
   refreshToken: string,
 ): Promise<LoginResult> {
-  const response = await api.postApiAuthRefresh({ accessToken, refreshToken } satisfies RefreshTokenRequest)
+  const response = await api.postApiV1AuthRefresh({ accessToken, refreshToken } satisfies RefreshTokenRequest)
   return response.data as LoginResult
 }
 
 export async function logout(): Promise<void> {
-  await api.postApiAuthLogout()
+  await api.postApiV1AuthLogout()
 }
 
 export async function getMe(): Promise<User> {
-  const response = await api.getApiAuthMe()
+  const response = await api.getApiV1AuthMe()
   return response.data as UserDto as User
 }

@@ -5,9 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace AdminShell.Host.Controllers;
 
 [Authorize]
-[ApiController]
-[Route("api/[controller]")]
-public class UsersController : ControllerBase
+public class UsersController : ApiControllerBase
 {
     private readonly IUserService _userService;
 

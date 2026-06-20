@@ -36,8 +36,8 @@ function normalizeEntry(entry: GeneratedAuditLogDto): AuditEntry {
 
 export async function getAuditLog(params: { skip: number; take: number; action?: string }): Promise<AuditLogResponse> {
   const response = params.action
-    ? await api.getApiAuditLogActionAction(params.action, { skip: params.skip, take: params.take })
-    : await api.getApiAuditLog({ skip: params.skip, take: params.take })
+    ? await api.getApiV1AuditLogActionAction(params.action, { skip: params.skip, take: params.take })
+    : await api.getApiV1AuditLog({ skip: params.skip, take: params.take })
 
   return {
     data: response.data.data.map(normalizeEntry),

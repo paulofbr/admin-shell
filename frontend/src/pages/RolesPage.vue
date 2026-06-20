@@ -2,7 +2,7 @@
   <ListViewer title="Roles & Permissions" subtitle="Manage roles and their permissions">
     <ResponsiveGrid
       ref="gridRef"
-      :columns="gridColumns as unknown as GridColumn[]"
+      :columns="gridColumns"
       :edit-mode="'popup'"
       editable
       deletable
@@ -61,20 +61,35 @@ import ListViewer from '@admin-shell/ui/ListViewer.vue'
 import ResponsiveGrid from '@admin-shell/ui/ResponsiveGrid.vue'
 import RoleEntityEditor from '@/components/roles/RoleEntityEditor.vue'
 import RolePermissionsEditor from '@/components/roles/RolePermissionsEditor.vue'
-import type { GridColumn, GridLoadQuery, GridRow } from '@admin-shell/ui/types'
+import type { GridColumn, GridDataLoader, GridLoadQuery, GridRow } from '@admin-shell/ui/types'
 import * as rolesApi from '@/api/roles'
 
 const gridRef = ref<InstanceType<typeof ResponsiveGrid>>()
 const permissionsGridRef = ref<InstanceType<typeof ResponsiveGrid>>()
 
 const gridColumns: GridColumn<rolesApi.Role>[] = [
-  { id: 'role', label: 'Role', prop: 'name', minWidth: '200' },
-  { id: 'description', label: 'Description', prop: 'description', minWidth: '250' },
+  {
+    id: 'role',
+    label: 'Role',
+    prop: 'name',
+    minWidth: '200',
+    filter: { type: 'text', placeholder: 'Filter role' },
+  },
+  {
+    id: 'description',
+    label: 'Description',
+    prop: 'description',
+    minWidth: '250',
+    filter: { type: 'text', placeholder: 'Filter description' },
+  },
   { id: 'permissions', label: 'Permissions', width: '250' },
   { id: 'created', label: 'Created', width: '140' },
 ]
 
 const permissionCounts = ref(new Map<string, number>())
+
+type RoleFilters = Record<string, string | null | undefined>
+type RoleForm = rolesApi.Role
 
 async function getRoleEditorModel(key: unknown, _row: GridRow): Promise<RoleForm> {
   return rolesApi.getRoleById(String(key))
@@ -85,10 +100,23 @@ async function getPermissionsEditorModel(key: unknown, _row: GridRow): Promise<s
   return response.assignedPermissionIds
 }
 
-async function loadRoles(): Promise<{ data: rolesApi.Role[]; total: number }> {
+const loadRoles: GridDataLoader<rolesApi.Role, RoleFilters> = async (query) => {
   const roles = await rolesApi.getRoles()
+  const roleFilter = typeof query.filters.role === 'string' ? query.filters.role.trim().toLowerCase() : ''
+  const descriptionFilter = typeof query.filters.description === 'string'
+    ? query.filters.description.trim().toLowerCase()
+    : ''
+
+  const filteredRoles = roles.filter((role) => {
+    const roleMatches = !roleFilter || role.name.toLowerCase().includes(roleFilter)
+    const descriptionMatches = !descriptionFilter
+      || (role.description ?? '').toLowerCase().includes(descriptionFilter)
+
+    return roleMatches && descriptionMatches
+  })
+
   const counts = new Map<string, number>()
-  for (const r of roles) {
+  for (const r of filteredRoles) {
     try {
       const resp = await rolesApi.getRolePermissions(r.id)
       counts.set(r.id, resp.assigned.length)
@@ -97,8 +125,8 @@ async function loadRoles(): Promise<{ data: rolesApi.Role[]; total: number }> {
   permissionCounts.value = counts
 
   return {
-    data: roles,
-    total: roles.length,
+    data: filteredRoles,
+    total: filteredRoles.length,
   }
 }
 

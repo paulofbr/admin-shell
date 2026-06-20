@@ -6,9 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace AdminShell.Host.Controllers;
 
-[ApiController]
-[Route("api/[controller]")]
-public class HealthController : ControllerBase
+public class HealthController : ApiControllerBase
 {
     private readonly IPluginLoader _pluginLoader;
     private readonly IHealthCheckService _healthCheckService;

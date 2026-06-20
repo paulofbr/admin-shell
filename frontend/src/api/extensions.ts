@@ -3,6 +3,6 @@ import { getAdminShellHostV1, type ExtensionRegistrySnapshot } from '@/generated
 const api = getAdminShellHostV1()
 
 export async function getExtensions(): Promise<ExtensionRegistrySnapshot> {
-  const response = await api.getApiExtensions()
+  const response = await api.getApiV1Extensions()
   return response.data
 }

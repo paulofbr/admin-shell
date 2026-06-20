@@ -5,7 +5,7 @@ import axios, {
 } from 'axios'
 
 const client = axios.create({
-  baseURL: '',
+  baseURL: 'http://127.0.0.1:5000',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -104,7 +104,7 @@ client.interceptors.response.use(
         return Promise.reject(error)
       }
 
-      const response = await client.post('/api/auth/refresh', { refreshToken })
+      const response = await client.post('/api/v1/Auth/refresh', { refreshToken })
       const { accessToken, refreshToken: nextRefreshToken } = response.data
 
       setTokens(accessToken, nextRefreshToken)

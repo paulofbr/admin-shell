@@ -1,6 +1,9 @@
 using AdminShell.Contracts;
 using AdminShell.Core.Entities;
+using AdminShell.Infrastructure.Data.Migrations;
+using AdminShell.Infrastructure.PluginSystem;
 using Dapper;
+using DbUp;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using System.Data;
@@ -12,43 +15,51 @@ public class DatabaseInitializer
     private readonly IDbConnectionFactory _connectionFactory;
     private readonly IPluginExtensionRegistry _extensionRegistry;
     private readonly IManagedEntitySchemaManager _managedEntitySchemaManager;
+    private readonly IPermissionDefinitionRegistry _permissionDefinitionRegistry;
+    private readonly ISettingsRegistry _settingsRegistry;
     private readonly ILogger<DatabaseInitializer> _logger;
 
     public DatabaseInitializer(
         IDbConnectionFactory connectionFactory,
         IPluginExtensionRegistry extensionRegistry,
         IManagedEntitySchemaManager managedEntitySchemaManager,
+        IPermissionDefinitionRegistry permissionDefinitionRegistry,
+        ISettingsRegistry settingsRegistry,
         ILogger<DatabaseInitializer> logger)
     {
         _connectionFactory = connectionFactory;
         _extensionRegistry = extensionRegistry;
         _managedEntitySchemaManager = managedEntitySchemaManager;
+        _permissionDefinitionRegistry = permissionDefinitionRegistry;
+        _settingsRegistry = settingsRegistry;
         _logger = logger;
     }
 
     public async Task InitializeAsync()
     {
-        // Ensure the database exists (connect to master first)
         await EnsureDatabaseExistsAsync();
+
+        var connectionString = _connectionFactory.CreateConnection().ConnectionString;
+
+        // Run DbUp embedded SQL migrations
+        var result = MigrationRunner.RunMigrations(connectionString, _logger);
+        if (!result.Successful)
+            throw new InvalidOperationException($"Database migration failed: {result.Error}");
 
         using var db = _connectionFactory.CreateConnection();
         db.Open();
 
-        // Run core migrations via DbUp (for future schema evolution)
-        await RunCoreMigrationsAsync(db);
-
         await _managedEntitySchemaManager.EnsureAsync(db);
-
         await _extensionRegistry.ApplyAllMigrationsAsync(db);
-
         await SeedDataAsync(db);
+        await _permissionDefinitionRegistry.EnsurePermissionDefinitionsAsync(db);
+        await _settingsRegistry.EnsureDefaultsAsync();
 
         _logger.LogInformation("Database initialized successfully");
     }
 
     private async Task EnsureDatabaseExistsAsync()
     {
-        // Create connection to master to check/create the database
         var masterCs = _connectionFactory.CreateConnection().ConnectionString;
         var builder = new SqlConnectionStringBuilder(masterCs);
         builder.InitialCatalog = "master";
@@ -56,7 +67,10 @@ public class DatabaseInitializer
         using var masterDb = new SqlConnection(builder.ConnectionString);
         masterDb.Open();
 
-        var dbName = "AdminShell";
+        var dbName = builder.InitialCatalog = "AdminShell";
+        var dbNameFromCs = new SqlConnectionStringBuilder(_connectionFactory.CreateConnection().ConnectionString).InitialCatalog;
+        dbName = string.IsNullOrWhiteSpace(dbNameFromCs) ? "AdminShell" : dbNameFromCs;
+
         var exists = await masterDb.ExecuteScalarAsync<int>(
             "SELECT COUNT(1) FROM sys.databases WHERE name = @Name",
             new { Name = dbName });
@@ -68,152 +82,8 @@ public class DatabaseInitializer
         }
     }
 
-    private async Task RunCoreMigrationsAsync(IDbConnection db)
-    {
-        // Fallback inline migrations (for when DbUp scripts don't exist yet)
-        const string createRoles = @"
-            IF OBJECT_ID(N'Roles', N'U') IS NULL
-            CREATE TABLE Roles (
-                Id UNIQUEIDENTIFIER PRIMARY KEY,
-                Name NVARCHAR(256) NOT NULL UNIQUE,
-                Description NVARCHAR(MAX),
-                IsDeleted BIT NOT NULL DEFAULT 0,
-                DeletedAt DATETIME2,
-                CreatedAt DATETIME2 NOT NULL,
-                CreatedBy NVARCHAR(256)
-            );";
-
-        const string createUsers = @"
-            IF OBJECT_ID(N'Users', N'U') IS NULL
-            CREATE TABLE Users (
-                Id UNIQUEIDENTIFIER PRIMARY KEY,
-                Email NVARCHAR(256) NOT NULL UNIQUE,
-                Username NVARCHAR(128) NOT NULL UNIQUE,
-                DisplayName NVARCHAR(256),
-                PasswordHash NVARCHAR(MAX) NOT NULL,
-                AvatarUrl NVARCHAR(MAX),
-                IsActive BIT NOT NULL DEFAULT 1,
-                RefreshToken NVARCHAR(MAX),
-                RefreshTokenExpiresAt DATETIME2,
-                IsDeleted BIT NOT NULL DEFAULT 0,
-                DeletedAt DATETIME2,
-                CreatedAt DATETIME2 NOT NULL,
-                UpdatedAt DATETIME2,
-                CreatedBy NVARCHAR(256),
-                UpdatedBy NVARCHAR(256)
-            );";
-
-        const string createUserRoles = @"
-            IF OBJECT_ID(N'UserRoles', N'U') IS NULL
-            CREATE TABLE UserRoles (
-                UserId UNIQUEIDENTIFIER NOT NULL,
-                RoleId UNIQUEIDENTIFIER NOT NULL,
-                PRIMARY KEY (UserId, RoleId)
-            );";
-
-        const string createPluginInfos = @"
-            IF OBJECT_ID(N'PluginInfos', N'U') IS NULL
-            CREATE TABLE PluginInfos (
-                Id UNIQUEIDENTIFIER PRIMARY KEY,
-                PluginId NVARCHAR(128) NOT NULL UNIQUE,
-                Name NVARCHAR(256) NOT NULL,
-                Version NVARCHAR(64) NOT NULL,
-                AssemblyPath NVARCHAR(MAX),
-                IsEnabled BIT NOT NULL DEFAULT 1,
-                Description NVARCHAR(MAX),
-                SettingsJson NVARCHAR(MAX),
-                IsDeleted BIT NOT NULL DEFAULT 0,
-                DeletedAt DATETIME2,
-                CreatedAt DATETIME2 NOT NULL,
-                CreatedBy NVARCHAR(256)
-            );";
-
-        const string createPermissions = @"
-            IF OBJECT_ID(N'Permissions', N'U') IS NULL
-            CREATE TABLE Permissions (
-                Id UNIQUEIDENTIFIER PRIMARY KEY,
-                Code NVARCHAR(128) NOT NULL UNIQUE,
-                Description NVARCHAR(MAX),
-                Resource NVARCHAR(128) NOT NULL,
-                Action NVARCHAR(64) NOT NULL,
-                IsDeleted BIT NOT NULL DEFAULT 0,
-                DeletedAt DATETIME2,
-                CreatedAt DATETIME2 NOT NULL,
-                CreatedBy NVARCHAR(256)
-            );";
-
-        const string createRolePermissions = @"
-            IF OBJECT_ID(N'RolePermissions', N'U') IS NULL
-            CREATE TABLE RolePermissions (
-                RoleId UNIQUEIDENTIFIER NOT NULL,
-                PermissionId UNIQUEIDENTIFIER NOT NULL,
-                PRIMARY KEY (RoleId, PermissionId)
-            );";
-
-        const string createSettings = @"
-            IF OBJECT_ID(N'Settings', N'U') IS NULL
-            CREATE TABLE Settings (
-                Id UNIQUEIDENTIFIER PRIMARY KEY,
-                [Key] NVARCHAR(256) NOT NULL UNIQUE,
-                Value NVARCHAR(MAX) NOT NULL,
-                Category NVARCHAR(128) NOT NULL DEFAULT 'general',
-                Description NVARCHAR(MAX),
-                ValueType NVARCHAR(32) NOT NULL DEFAULT 'string',
-                IsDeleted BIT NOT NULL DEFAULT 0,
-                DeletedAt DATETIME2,
-                CreatedAt DATETIME2 NOT NULL,
-                UpdatedAt DATETIME2,
-                CreatedBy NVARCHAR(256),
-                UpdatedBy NVARCHAR(256)
-            );";
-
-        const string createAuditLogs = @"
-            IF OBJECT_ID(N'AuditLogs', N'U') IS NULL
-            CREATE TABLE AuditLogs (
-                Id UNIQUEIDENTIFIER PRIMARY KEY,
-                Action NVARCHAR(64) NOT NULL,
-                EntityType NVARCHAR(128) NOT NULL,
-                EntityId NVARCHAR(128),
-                PreviousValue NVARCHAR(MAX),
-                NewValue NVARCHAR(MAX),
-                PerformedBy NVARCHAR(256) NOT NULL,
-                IpAddress NVARCHAR(64),
-                Details NVARCHAR(MAX),
-                IsDeleted BIT NOT NULL DEFAULT 0,
-                DeletedAt DATETIME2,
-                CreatedAt DATETIME2 NOT NULL,
-                CreatedBy NVARCHAR(256)
-            );";
-
-        const string createDepartments = @"
-            IF OBJECT_ID(N'Departments', N'U') IS NULL
-            CREATE TABLE Departments (
-                Id UNIQUEIDENTIFIER PRIMARY KEY,
-                Name NVARCHAR(256) NOT NULL,
-                Code NVARCHAR(64) NOT NULL UNIQUE,
-                Description NVARCHAR(MAX),
-                IsActive BIT NOT NULL DEFAULT 1,
-                IsDeleted BIT NOT NULL DEFAULT 0,
-                CreatedAt DATETIME2 NOT NULL,
-                UpdatedAt DATETIME2,
-                CreatedBy NVARCHAR(256),
-                UpdatedBy NVARCHAR(256)
-            );";
-
-        await db.ExecuteAsync(createRoles);
-        await db.ExecuteAsync(createUsers);
-        await db.ExecuteAsync(createUserRoles);
-        await db.ExecuteAsync(createPluginInfos);
-        await db.ExecuteAsync(createPermissions);
-        await db.ExecuteAsync(createRolePermissions);
-        await db.ExecuteAsync(createSettings);
-        await db.ExecuteAsync(createAuditLogs);
-        await db.ExecuteAsync(createDepartments);
-    }
-
     private async Task SeedDataAsync(IDbConnection db)
     {
-        // Check if admin role already exists
         var adminRoleId = await db.QueryFirstOrDefaultAsync<Guid?>(
             "SELECT TOP 1 Id FROM Roles WHERE Name = @Name",
             new { Name = "Admin" });
@@ -226,8 +96,8 @@ public class DatabaseInitializer
             var roleUserId = Guid.NewGuid();
 
             await db.ExecuteAsync(
-                @"INSERT INTO Roles (Id, Name, Description, IsDeleted, CreatedAt, CreatedBy)
-                  VALUES (@Id, @Name, @Desc, 0, @Now, 'system')",
+                @"INSERT INTO Roles (Id, Name, Description, IsDeleted, CreatedAt, CreatedBy, UpdatedAt, UpdatedBy)
+                  VALUES (@Id, @Name, @Desc, 0, @Now, 'system', @Now, 'system')",
                 new[] {
                     new { Id = roleAdminId, Name = "Admin", Desc = (string?)"Full system access", Now = now },
                     new { Id = roleUserId, Name = "User", Desc = (string?)"Standard user access", Now = now }
@@ -248,8 +118,8 @@ public class DatabaseInitializer
             adminUserId = Guid.NewGuid();
 
             await db.ExecuteAsync(
-                @"INSERT INTO Users (Id, Email, Username, DisplayName, PasswordHash, IsActive, IsDeleted, CreatedAt, CreatedBy)
-                  VALUES (@Id, @Email, @Username, @DisplayName, @Pwd, 1, 0, @Now, 'system')",
+                @"INSERT INTO Users (Id, Email, Username, DisplayName, PasswordHash, IsActive, IsDeleted, CreatedAt, CreatedBy, UpdatedAt, UpdatedBy)
+                  VALUES (@Id, @Email, @Username, @DisplayName, @Pwd, 1, 0, @Now, 'system', @Now, 'system')",
                 new { Id = adminUserId, Email = "admin@admin.com", Username = "admin", DisplayName = (string?)"Administrator", Pwd = passwordHash, Now = now });
 
             _logger.LogInformation("Admin user seeded: admin@admin.com / admin123");
@@ -307,8 +177,8 @@ public class DatabaseInitializer
                 permissionId = Guid.NewGuid();
 
                 await db.ExecuteAsync(
-                    @"INSERT INTO Permissions (Id, Code, Description, Resource, Action, IsDeleted, CreatedAt, CreatedBy)
-                      VALUES (@Id, @Code, @Description, @Resource, @Action, 0, @Now, 'system')",
+                    @"INSERT INTO Permissions (Id, Code, Description, Resource, Action, IsDeleted, CreatedAt, CreatedBy, UpdatedAt, UpdatedBy)
+                      VALUES (@Id, @Code, @Description, @Resource, @Action, 0, @Now, 'system', @Now, 'system')",
                     new { Id = permissionId.Value, permission.Code, permission.Description, permission.Resource, permission.Action, Now = now });
             }
 
@@ -320,7 +190,6 @@ public class DatabaseInitializer
                 new { RoleId = adminRoleId, PermissionId = permissionId });
         }
 
-        // Always seed default settings if missing (supports DB upgrades)
         var hasSettings = await db.ExecuteScalarAsync<int>(
             "SELECT COUNT(1) FROM Settings WHERE IsDeleted = 0");
         if (hasSettings == 0)

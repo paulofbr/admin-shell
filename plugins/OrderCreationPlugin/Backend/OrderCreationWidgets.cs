@@ -19,7 +19,7 @@ public sealed class OrderCreationWidgets : IWidgetPlugin
             Settings = new Dictionary<string, object>
             {
                 ["description"] = "Widget Vue que consulta catálogo e cria encomenda via API do plugin.",
-                ["requiresPermissions"] = new[] { "orders:create" }
+                ["requiresPermissions"] = new[] { OrderCreationPermissions.Create }
             }
         };
     }

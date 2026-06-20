@@ -7,9 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace AdminShell.Host.Controllers;
 
 [Authorize]
-[ApiController]
-[Route("api/[controller]")]
-public class RolesController : ControllerBase
+public class RolesController : ApiControllerBase
 {
     private readonly IRoleRepository _roleRepository;
     private readonly IPermissionRepository _permissionRepository;

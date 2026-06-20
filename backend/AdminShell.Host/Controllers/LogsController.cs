@@ -6,9 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace AdminShell.Host.Controllers;
 
 [Authorize]
-[ApiController]
-[Route("api/[controller]")]
-public class LogsController : ControllerBase
+public class LogsController : ApiControllerBase
 {
     private readonly ILogFileReader _logFileReader;
 

@@ -1,5 +1,6 @@
 using AdminShell.Contracts;
 using AdminShell.Infrastructure.Data;
+using AdminShell.Infrastructure.PluginSystem;
 using Microsoft.Extensions.Logging.Abstractions;
 using System.Data;
 using Xunit;
@@ -27,7 +28,9 @@ public sealed class DatabaseFixture : IAsyncLifetime
         var logger = NullLogger<DatabaseInitializer>.Instance;
         var extensionRegistry = new NoOpExtensionRegistry();
         var managedEntitySchemaManager = new NoOpManagedEntitySchemaManager();
-        var initializer = new DatabaseInitializer(ConnectionFactory, extensionRegistry, managedEntitySchemaManager, logger);
+        var permissionDefinitionRegistry = new PermissionDefinitionRegistry();
+        var settingsRegistry = new NoOpSettingsRegistry();
+        var initializer = new DatabaseInitializer(ConnectionFactory, extensionRegistry, managedEntitySchemaManager, permissionDefinitionRegistry, settingsRegistry, logger);
         await initializer.InitializeAsync();
     }
 
@@ -69,5 +72,25 @@ public sealed class DatabaseFixture : IAsyncLifetime
     private sealed class NoOpManagedEntitySchemaManager : IManagedEntitySchemaManager
     {
         public Task EnsureAsync(IDbConnection connection, CancellationToken ct = default) => Task.CompletedTask;
+    }
+
+    private sealed class NoOpSettingsRegistry : ISettingsRegistry
+    {
+        public IReadOnlyList<SettingDefinition> GetAll() => [];
+        public IReadOnlyList<SettingDefinition> GetForCategory(string category) => [];
+        public Task EnsureDefaultsAsync(CancellationToken ct = default) => Task.CompletedTask;
+        public Task<SettingsResponse> GetSettingsAsync(string category, CancellationToken ct = default)
+            => Task.FromResult(new SettingsResponse(category, category, []));
+        public Task<SettingsResponse> UpdateAsync(
+            string category,
+            IEnumerable<UpdateSettingRequest> requests,
+            CancellationToken ct = default)
+            => Task.FromResult(new SettingsResponse(category, category, []));
+        public Task<TSettings> GetOptionsAsync<TSettings>(CancellationToken ct = default)
+            where TSettings : class, new()
+            => Task.FromResult(new TSettings());
+        public Task SetOptionsAsync<TSettings>(TSettings options, CancellationToken ct = default)
+            where TSettings : class
+            => Task.CompletedTask;
     }
 }

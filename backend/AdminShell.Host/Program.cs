@@ -9,25 +9,45 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using AdminShell.Host.Middleware;
 using AdminShell.Host.Services;
+using Asp.Versioning;
+using FluentValidation;
+using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using Scalar.AspNetCore;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure Serilog
+if (builder.Environment.IsDevelopment())
+{
+    builder.Configuration.AddUserSecrets<Program>();
+}
+
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
     .WriteTo.Console()
     .CreateLogger();
 builder.Host.UseSerilog();
 
-// Event Bus (singleton, shared across all plugins)
 var eventBus = new InMemoryEventBus();
 builder.Services.AddSingleton<IEventBus>(eventBus);
 
-// Add controllers and OpenAPI
 builder.Services.AddControllers();
+builder.Services.AddSignalR();
+builder.Services.AddValidatorsFromAssemblyContaining<Program>();
+
+builder.Services.AddApiVersioning(options =>
+{
+    options.DefaultApiVersion = new ApiVersion(1, 0);
+    options.AssumeDefaultVersionWhenUnspecified = true;
+    options.ReportApiVersions = true;
+    options.ApiVersionReader = new UrlSegmentApiVersionReader();
+}).AddApiExplorer(options =>
+{
+    options.GroupNameFormat = "'v'VVV";
+    options.SubstituteApiVersionInUrl = true;
+});
+
 builder.Services.AddOpenApi(options =>
 {
     options.AddDocumentTransformer((document, _, _) =>
@@ -56,8 +76,13 @@ builder.Services.AddOpenApi(options =>
     });
 });
 
-// JWT Authentication
-var jwtSecret = builder.Configuration["Jwt:Secret"] ?? throw new InvalidOperationException("JWT Secret required");
+var jwtSecret = builder.Configuration["Jwt:Secret"]
+    ?? Environment.GetEnvironmentVariable("ADMIN_SHELL_JWT_SECRET")
+    ?? throw new InvalidOperationException(
+        "JWT Secret required. Set ADMIN_SHELL_JWT_SECRET env var or 'dotnet user-secrets set Jwt:Secret <value>'.");
+
+builder.Configuration["Jwt:Secret"] = jwtSecret;
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -75,73 +100,74 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 builder.Services.AddAuthorization();
 
-// CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowSPA", policy =>
     {
-        policy.WithOrigins(builder.Configuration["Cors:Origins"] ?? "http://localhost:3000")
+        policy.WithOrigins("http://localhost:5173", "http://192.168.1.72:5173", "http://127.0.0.1:5173")
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
     });
 });
 
-// Add infrastructure layer (Dapper, repositories, services, plugin loader)
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddSingleton<ILogFileReader, SerilogLogFileReader>();
+builder.Services.AddSingleton<INotificationBroadcaster, NotificationBroadcaster>();
 
-// OpenTelemetry — tracing only
 builder.Services.AddOpenTelemetry()
     .WithTracing(tracerProviderBuilder =>
         tracerProviderBuilder
             .AddAspNetCoreInstrumentation()
             .AddHttpClientInstrumentation()
+            .AddConsoleExporter())
+    .WithMetrics(meterProviderBuilder =>
+        meterProviderBuilder
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
             .AddConsoleExporter());
 
-// Health checks
 builder.Services.AddHealthChecks();
 
-// Load & initialize plugins BEFORE building the app (so their services register in DI)
+var queryRegistry = new PluginQueryRegistry();
+builder.Services.AddSingleton<IQueryRegistry>(queryRegistry);
+
+// Plugin loading — synchronous phase (register services before Build)
 var prePluginsDir = Path.Combine(builder.Environment.ContentRootPath, "plugins");
 if (!Directory.Exists(prePluginsDir))
     prePluginsDir = Path.Combine(builder.Environment.ContentRootPath, "..", "..", "plugins");
+builder.Configuration["Plugins:Directory"] = prePluginsDir;
 
 if (Directory.Exists(prePluginsDir))
 {
-    builder.Configuration["Plugins:Directory"] = prePluginsDir;
-
-    var pluginLoader = new PluginLoader(new Microsoft.Extensions.Logging.LoggerFactory().CreateLogger<PluginLoader>());
-    var queryRegistry = new PluginQueryRegistry();
+    var pluginLoader = new PluginLoader(
+        Microsoft.Extensions.Logging.Abstractions.NullLogger<PluginLoader>.Instance);
     pluginLoader.SetEventBus(eventBus);
     pluginLoader.LoadPluginsAsync(prePluginsDir).GetAwaiter().GetResult();
     pluginLoader.InitializePlugins(builder.Services, builder.Configuration, queryRegistry);
     builder.Services.AddSingleton<IPluginLoader>(pluginLoader);
-    builder.Services.AddSingleton<IQueryRegistry>(queryRegistry);
+    Log.Information("Plugins loaded and initialized from {Dir}", prePluginsDir);
 }
 else
 {
-    Log.Information("No plugins directory found at {Dir}, running without plugins", prePluginsDir);
-    builder.Services.AddSingleton<IPluginLoader, PluginLoader>();
+    builder.Services.AddSingleton<IPluginLoader>(sp =>
+        new PluginLoader(sp.GetRequiredService<ILogger<PluginLoader>>()));
+    Log.Information("No plugins directory at {Dir}, running without plugins", prePluginsDir);
 }
 
 var app = builder.Build();
 
-// Configure pipeline
-if (app.Environment.IsDevelopment())
-{
-    app.UseDeveloperExceptionPage();
-}
-
+app.UseGlobalExceptionHandler();
 app.UseSecurityHeaders();
 app.UseRateLimiting();
 app.UseSerilogRequestLogging();
 app.UseCors("AllowSPA");
 app.UseAuthentication();
 app.UseAuthorization();
-app.MapControllers();
 
-// Configure plugins and map their endpoints before OpenAPI is exposed.
+app.MapControllers();
+app.MapHub<AdminShell.Host.Hubs.NotificationHub>("/api/v{version:apiVersion}/hub/notifications");
+
 var pluginLoader2 = app.Services.GetRequiredService<IPluginLoader>();
 pluginLoader2.ConfigurePlugins(app, app.Environment);
 pluginLoader2.MapPluginEndpoints(app);
@@ -150,7 +176,6 @@ app.MapOpenApi();
 app.MapScalarApiReference(options => options.WithTitle("Admin Shell API"));
 app.MapHealthChecks("/healthz");
 
-// Initialize database (create tables + seed) using Dapper
 using (var scope = app.Services.CreateScope())
 {
     var initializer = scope.ServiceProvider.GetRequiredService<DatabaseInitializer>();
@@ -163,7 +188,6 @@ using (var scope = app.Services.CreateScope())
     await extensionRegistry.ApplyAllMigrationsAsync(db);
 }
 
-// Fire application started event
 _ = eventBus.PublishAsync(new ApplicationStartedEvent(DateTime.UtcNow, pluginLoader2.LoadedPlugins.Count));
 
 Log.Information("Admin Shell API started successfully");

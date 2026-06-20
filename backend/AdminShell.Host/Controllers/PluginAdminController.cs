@@ -7,17 +7,18 @@ using Microsoft.AspNetCore.Mvc;
 namespace AdminShell.Host.Controllers;
 
 [Authorize]
-[ApiController]
-[Route("api/plugins")]
-public class PluginAdminController : ControllerBase
+[Route("api/v{version:apiVersion}/plugins")]
+public class PluginAdminController : ApiControllerBase
 {
     private readonly IPluginLoader _pluginLoader;
     private readonly IPluginInstaller _pluginInstaller;
+    private readonly ISettingsRegistry _settingsRegistry;
 
-    public PluginAdminController(IPluginLoader pluginLoader, IPluginInstaller pluginInstaller)
+    public PluginAdminController(IPluginLoader pluginLoader, IPluginInstaller pluginInstaller, ISettingsRegistry settingsRegistry)
     {
         _pluginLoader = pluginLoader;
         _pluginInstaller = pluginInstaller;
+        _settingsRegistry = settingsRegistry;
     }
 
     [HttpPost("install")]
@@ -75,6 +76,37 @@ public class PluginAdminController : ControllerBase
                 d.ErrorMessage
             })
         }));
+    }
+
+    [HttpGet("{pluginId}/settings")]
+    [ProducesResponseType(typeof(SettingsResponse), StatusCodes.Status200OK)]
+    public async Task<ActionResult<SettingsResponse>> GetSettings(string pluginId, CancellationToken ct)
+    {
+        try
+        {
+            return Ok(await _settingsRegistry.GetSettingsAsync(pluginId, ct));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { Message = ex.Message });
+        }
+    }
+
+    [HttpPut("{pluginId}/settings")]
+    [ProducesResponseType(typeof(SettingsResponse), StatusCodes.Status200OK)]
+    public async Task<ActionResult<SettingsResponse>> UpdateSettings(
+        string pluginId,
+        [FromBody] List<UpdateSettingRequest> requests,
+        CancellationToken ct)
+    {
+        try
+        {
+            return Ok(await _settingsRegistry.UpdateAsync(pluginId, requests, ct));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
     }
 
     [HttpPost("{pluginId}/enable")]

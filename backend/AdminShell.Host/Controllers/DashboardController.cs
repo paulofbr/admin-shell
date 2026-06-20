@@ -4,9 +4,8 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace AdminShell.Host.Controllers;
 
-[ApiController]
-[Route("api/dashboard")]
-public class DashboardController : ControllerBase
+[Route("api/v{version:apiVersion}/dashboard")]
+public class DashboardController : ApiControllerBase
 {
     private readonly IUserRepository _userRepo;
     private readonly IRoleRepository _roleRepo;

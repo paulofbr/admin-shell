@@ -3,7 +3,7 @@
     <div v-if="showToolbar" class="responsive-grid__toolbar">
       <slot name="toolbar" />
 
-      <div v-if="filters.length > 0" class="responsive-grid__filters">
+      <div v-if="effectiveFilters.length > 0" class="responsive-grid__filters">
         <el-select
           v-for="filter in selectFilters"
           :key="filter.id"
@@ -93,6 +93,17 @@
         </el-table-column>
 
         <el-table-column
+          v-for="column in pluginColumns"
+          :key="`plugin-${column.id}`"
+          :label="column.label"
+          :width="column.width"
+        >
+          <template #default="{ row }">
+            <span v-html="column.render(row as GridRow)" />
+          </template>
+        </el-table-column>
+
+        <el-table-column
           v-if="shouldShowActionColumn && !hasActionsColumn"
           key="actions"
           label="Actions"
@@ -108,29 +119,14 @@
               />
               <template v-else>
                 <el-button
-                  v-if="editMode === 'popup' || editMode === 'fullpage'"
+                  v-for="action in getVisibleRowActions(row as GridRow)"
+                  :key="action.id"
                   link
-                  type="primary"
-                  @click="openEditor(row as GridRow)"
+                  :type="action.type ?? 'primary'"
+                  :disabled="resolveActionDisabled(action, row as GridRow)"
+                  @click="runRowAction(action, row as GridRow)"
                 >
-                  {{ editButtonLabel }}
-                </el-button>
-                <el-button
-                  v-else
-                  link
-                  type="primary"
-                  @click="openInlineEditor(row as GridRow)"
-                >
-                  {{ editButtonLabel }}
-                </el-button>
-
-                <el-button
-                  v-if="deletable"
-                  link
-                  type="danger"
-                  @click="handleDelete(row as GridRow)"
-                >
-                  {{ deleteButtonLabel }}
+                  {{ resolveActionLabel(action, row as GridRow) }}
                 </el-button>
               </template>
             </div>
@@ -179,31 +175,25 @@
           </span>
         </div>
 
+        <div
+          v-for="column in pluginColumns"
+          :key="`plugin-mobile-${column.id}`"
+          class="responsive-grid__mobile-field"
+        >
+          <span class="responsive-grid__mobile-label">{{ column.label }}</span>
+          <span class="responsive-grid__mobile-value" v-html="column.render(row)" />
+        </div>
+
         <div v-if="shouldShowActionColumn && !$slots['mobile-actions']" class="responsive-grid__mobile-actions">
           <el-button
-            v-if="editMode === 'popup' || editMode === 'fullpage'"
+            v-for="action in getVisibleRowActions(row)"
+            :key="action.id"
             link
-            type="primary"
-            @click="openEditor(row)"
+            :type="action.type ?? 'primary'"
+            :disabled="resolveActionDisabled(action, row)"
+            @click="runRowAction(action, row)"
           >
-            {{ editButtonLabel }}
-          </el-button>
-          <el-button
-            v-else
-            link
-            type="primary"
-            @click="openInlineEditor(row)"
-          >
-            {{ editButtonLabel }}
-          </el-button>
-
-          <el-button
-            v-if="deletable"
-            link
-            type="danger"
-            @click="handleDelete(row)"
-          >
-            {{ deleteButtonLabel }}
+            {{ resolveActionLabel(action, row) }}
           </el-button>
         </div>
 
@@ -299,22 +289,6 @@ export type GridRow = Record<string, unknown>
 
 export type EditorModelLoader = (key: unknown, row: GridRow) => Promise<unknown> | unknown
 
-export interface GridLoadQuery {
-  currentPage: number
-  pageSize: number
-  skip: number
-  filters: Record<string, unknown>
-}
-
-export interface GridLoadResult<T extends GridRow = GridRow> {
-  data: T[]
-  total?: number
-}
-
-export type GridDataLoader<T extends GridRow = GridRow> = (
-  query: GridLoadQuery
-) => Promise<GridLoadResult<T>> | GridLoadResult<T>
-
 export interface GridFilterOption {
   label: string
   value: string | number | boolean
@@ -329,6 +303,44 @@ export interface GridFilter {
   options?: GridFilterOption[]
 }
 
+export interface GridColumnFilter {
+  type?: 'text' | 'select'
+  placeholder?: string
+  options?: GridFilterOption[]
+}
+
+export type GridColumnFilterConfig = boolean | GridColumnFilter
+
+export type GridRowActionType = 'primary' | 'success' | 'warning' | 'danger' | 'info' | 'default'
+
+export interface GridRowAction {
+  id: string
+  label: string | ((row: GridRow) => string)
+  type?: GridRowActionType
+  disabled?: boolean | ((row: GridRow) => boolean)
+  visible?: boolean | ((row: GridRow) => boolean)
+  handler?: (row: GridRow) => Promise<void> | void
+}
+
+export interface GridLoadQuery<TFilters extends Record<string, unknown> = Record<string, unknown>> {
+  currentPage: number
+  pageSize: number
+  skip: number
+  filters: TFilters
+}
+
+export interface GridLoadResult<T extends GridRow = GridRow> {
+  data: T[]
+  total?: number
+}
+
+export type GridDataLoader<
+  T extends GridRow = GridRow,
+  TFilters extends Record<string, unknown> = Record<string, unknown>,
+> = (
+  query: GridLoadQuery<TFilters>
+) => Promise<GridLoadResult<T>> | GridLoadResult<T>
+
 export interface GridColumn<T extends object = GridRow> {
   id: string
   label: string
@@ -338,6 +350,7 @@ export interface GridColumn<T extends object = GridRow> {
   align?: 'left' | 'center' | 'right'
   fixed?: 'left' | 'right'
   sortable?: boolean | 'custom'
+  filter?: GridColumnFilterConfig
 }
 
 export interface GridMobileField<T extends object = GridRow> {
@@ -347,9 +360,20 @@ export interface GridMobileField<T extends object = GridRow> {
   fullWidth?: boolean
 }
 
+export interface PluginTableColumnContrib {
+  pluginId: string
+  id: string
+  label: string
+  width?: number
+  filterType?: 'select' | 'text' | 'none'
+  filterOptions?: { label: string; value: string }[]
+  render: (row: GridRow) => string
+}
+
 interface Props {
   data?: GridRow[]
   columns: GridColumn[]
+  pluginColumns?: PluginTableColumnContrib[]
   filters?: GridFilter[]
   mobileFields?: GridMobileField[]
   loading?: boolean
@@ -357,6 +381,7 @@ interface Props {
   editMode?: GridEditMode
   editable?: boolean
   deletable?: boolean
+  actions?: GridRowAction[]
   editButtonLabel?: string
   deleteButtonLabel?: string
   deleteConfirmTitle?: string
@@ -425,6 +450,7 @@ const props = withDefaults(defineProps<Props>(), {
   editMode: 'none',
   editable: false,
   deletable: false,
+  actions: () => [],
   editButtonLabel: 'Edit',
   deleteButtonLabel: 'Delete',
   deleteConfirmTitle: 'Delete item',
@@ -446,6 +472,70 @@ const internalLoading = ref(false)
 const displayData = computed(() => props.loadData ? loadedData.value : props.data ?? [])
 const displayLoading = computed(() => props.loadData ? internalLoading.value : props.loading)
 const displayTotal = computed(() => props.loadData ? loadedTotal.value : props.total)
+
+const columnFilters = computed<GridFilter[]>(() => props.columns.flatMap((column) => {
+  if (!column.filter) return []
+
+  const config = typeof column.filter === 'object' ? column.filter : {}
+  const type = config.type ?? 'text'
+  const placeholder = config.placeholder ?? `Filter ${column.label}`
+
+  return [{
+    id: column.id,
+    label: column.label,
+    type,
+    placeholder,
+    options: config.options,
+  }]
+}))
+
+const pluginColumnFilters = computed<GridFilter[]>(() => (props.pluginColumns ?? []).flatMap((column) => {
+  if (!column.filterType || column.filterType === 'none') return []
+
+  const type = column.filterType
+  return [{
+    id: column.id,
+    label: column.label,
+    type,
+    placeholder: `Filter ${column.label}`,
+    options: column.filterOptions?.map((option) => ({
+      label: option.label,
+      value: option.value,
+    })),
+  }]
+}))
+
+const effectiveFilters = computed<GridFilter[]>(() => {
+  const filtersById = new Map<string, GridFilter>()
+
+  for (const filter of [...columnFilters.value, ...pluginColumnFilters.value, ...props.filters]) {
+    filtersById.set(filter.id, filter)
+  }
+
+  return Array.from(filtersById.values())
+})
+
+const rowActions = computed<GridRowAction[]>(() => [
+  ...props.actions,
+  ...(props.editable && props.editMode !== 'none' && props.editMode !== 'batch'
+    ? [{
+        id: 'edit',
+        label: props.editButtonLabel,
+        type: 'primary' as const,
+        handler: props.editMode === 'popup' || props.editMode === 'fullpage'
+          ? openEditor
+          : openInlineEditor,
+      }]
+    : []),
+  ...(props.deletable
+    ? [{
+        id: 'delete',
+        label: props.deleteButtonLabel,
+        type: 'danger' as const,
+        handler: handleDelete,
+      }]
+    : []),
+])
 
 const hasActionsColumn = computed(
   () => props.columns.some((column) => column.id === 'actions') || !!slots['cell-actions'],
@@ -469,14 +559,21 @@ const gridColumns = computed(() => {
 })
 
 const shouldShowActionColumn = computed(
-  () => props.editable && props.editMode !== 'none' && props.editMode !== 'batch',
+  () => props.actions.length > 0 || (props.editable && props.editMode !== 'none' && props.editMode !== 'batch'),
 )
 
-const filterValues = computed(() => {
-  return Object.fromEntries(
-    props.filters.map((filter) => [filter.id, filter.value ?? null])
+const filterValues = ref<Record<string, unknown>>({})
+
+const selectFilters = computed(() => effectiveFilters.value.filter((filter) => filter.type === 'select'))
+const textFilters = computed(() => effectiveFilters.value.filter((filter) => filter.type !== 'select'))
+
+function syncFilterValues(): void {
+  filterValues.value = Object.fromEntries(
+    effectiveFilters.value.map((filter) => [filter.id, filter.value ?? null])
   ) as Record<string, unknown>
-})
+}
+
+watch(() => effectiveFilters.value, syncFilterValues, { deep: true, immediate: true })
 
 const fallbackCurrentPage = ref(1)
 
@@ -499,14 +596,6 @@ const shouldShowPagination = computed(() => {
 
 const shouldShowDefaultFooter = computed(
   () => shouldShowPagination.value || displayLoading.value,
-)
-
-const selectFilters = computed(() =>
-  props.filters.filter((filter) => filter.type === 'select' || filter.options?.length)
-)
-
-const textFilters = computed(() =>
-  props.filters.filter((filter) => filter.type === 'text' && !filter.options?.length)
 )
 
 const computedMobileFields = computed(() => {
@@ -633,6 +722,28 @@ function resolveDeleteErrorMessage(error: unknown, row: GridRow): string {
   return error instanceof Error ? error.message : 'Failed to delete item'
 }
 
+function resolveActionLabel(action: GridRowAction, row: GridRow): string {
+  return typeof action.label === 'function' ? action.label(row) : action.label
+}
+
+function resolveActionDisabled(action: GridRowAction, row: GridRow): boolean {
+  return typeof action.disabled === 'function' ? action.disabled(row) : !!action.disabled
+}
+
+function isActionVisible(action: GridRowAction, row: GridRow): boolean {
+  return typeof action.visible === 'function' ? action.visible(row) : action.visible !== false
+}
+
+function getVisibleRowActions(row: GridRow): GridRowAction[] {
+  return rowActions.value.filter((action) => isActionVisible(action, row))
+}
+
+async function runRowAction(action: GridRowAction, row: GridRow): Promise<void> {
+  if (!isActionVisible(action, row)) return
+
+  await action.handler?.(row)
+}
+
 async function handleDelete(row: GridRow): Promise<void> {
   const message =
     typeof props.deleteConfirmMessage === 'function'
@@ -757,12 +868,14 @@ function formatCellValue(row: GridRow, column: GridColumn | GridMobileField): st
 }
 
 function updateFilter(id: string, value: unknown): void {
+  const normalizedValue = value === null || value === undefined ? '' : String(value)
   const nextFilters = {
     ...filterValues.value,
-    [id]: value,
+    [id]: normalizedValue,
   }
 
-  emit('filter-change', { id, value })
+  filterValues.value = nextFilters
+  emit('filter-change', { id, value: normalizedValue })
 
   if (props.loadData) {
     fallbackCurrentPage.value = 1
