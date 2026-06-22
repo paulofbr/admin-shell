@@ -1,3 +1,4 @@
+using AdminShell.Contracts;
 using AdminShell.Core.Entities;
 
 namespace AdminShell.Core.Interfaces;

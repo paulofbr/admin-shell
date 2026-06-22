@@ -1,6 +1,7 @@
 using AdminShell.Contracts;
 using AdminShell.Core.Entities;
 using AdminShell.Core.Interfaces;
+using AdminShell.Infrastructure.Mappings;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,26 +12,30 @@ public class RolesController : ApiControllerBase
 {
     private readonly IRoleRepository _roleRepository;
     private readonly IPermissionRepository _permissionRepository;
+    private readonly AppMapper _mapper;
 
-    public RolesController(IRoleRepository roleRepository, IPermissionRepository permissionRepository)
+    public RolesController(IRoleRepository roleRepository, IPermissionRepository permissionRepository, AppMapper mapper)
     {
         _roleRepository = roleRepository;
         _permissionRepository = permissionRepository;
+        _mapper = mapper;
     }
 
     [HttpGet]
-    [ProducesResponseType(typeof(List<RoleDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<List<RoleDto>>> GetAll(CancellationToken ct)
+    [ProducesResponseType(typeof(PagedResult<RoleDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<PagedResult<RoleDto>>> GetAll(
+        [FromQuery] QuerySpecification query,
+        CancellationToken ct)
     {
         var roles = await _roleRepository.GetAllAsync(ct);
-        return Ok(roles.Select(r => new RoleDto
-        {
-            Id = r.Id,
-            Name = r.Name,
-            Description = r.Description,
-            CreatedAt = r.CreatedAt,
-            ExtensionFields = r.ExtensionFields
-        }));
+        var dtos = roles.Select(r => _mapper.RoleToDto(r)).ToList();
+
+        // take=0 means return all (no paging)
+        var paged = query.Take > 0
+            ? dtos.Skip(query.Skip).Take(query.Take).ToList()
+            : dtos;
+
+        return Ok(new PagedResult<RoleDto>(paged, dtos.Count, query.Skip, query.Take));
     }
 
     [HttpGet("{id:guid}")]
@@ -39,14 +44,7 @@ public class RolesController : ApiControllerBase
     {
         var role = await _roleRepository.GetByIdAsync(id, ct);
         if (role is null) return NotFound();
-        return Ok(new RoleDto
-        {
-            Id = role.Id,
-            Name = role.Name,
-            Description = role.Description,
-            CreatedAt = role.CreatedAt,
-            ExtensionFields = role.ExtensionFields
-        });
+        return Ok(_mapper.RoleToDto(role));
     }
 
     [HttpPost]
@@ -68,14 +66,7 @@ public class RolesController : ApiControllerBase
         };
 
         var created = await _roleRepository.AddAsync(role, ct);
-        return CreatedAtAction(nameof(GetById), new { id = created.Id }, new RoleDto
-        {
-            Id = created.Id,
-            Name = created.Name,
-            Description = created.Description,
-            CreatedAt = created.CreatedAt,
-            ExtensionFields = created.ExtensionFields
-        });
+        return CreatedAtAction(nameof(GetById), new { id = created.Id }, _mapper.RoleToDto(created));
     }
 
     [HttpPut("{id:guid}")]
@@ -100,14 +91,7 @@ public class RolesController : ApiControllerBase
         role.UpdatedAt = DateTime.UtcNow;
         await _roleRepository.UpdateAsync(role, ct);
 
-        return Ok(new RoleDto
-        {
-            Id = role.Id,
-            Name = role.Name,
-            Description = role.Description,
-            CreatedAt = role.CreatedAt,
-            ExtensionFields = role.ExtensionFields
-        });
+        return Ok(_mapper.RoleToDto(role));
     }
 
     [HttpDelete("{id:guid}")]

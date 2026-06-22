@@ -2,11 +2,9 @@ using AdminShell.Core.Entities;
 
 namespace AdminShell.Core.Interfaces;
 
-public interface IAuditLogRepository
+public interface IAuditLogRepository : IBaseRepository<AuditLog>
 {
-    Task<AuditLog> AddAsync(AuditLog log, CancellationToken ct = default);
-    Task<IReadOnlyList<AuditLog>> GetAllAsync(int skip = 0, int take = 50, CancellationToken ct = default);
-    Task<int> GetCountAsync(CancellationToken ct = default);
+    Task<IReadOnlyList<AuditLog>> GetAllAsync(int skip, int take, CancellationToken ct = default);
     Task<IReadOnlyList<AuditLog>> GetByActionAsync(string action, int skip = 0, int take = 50, CancellationToken ct = default);
     Task<IReadOnlyList<AuditLog>> GetByUserAsync(string userId, int skip = 0, int take = 50, CancellationToken ct = default);
     Task<IReadOnlyList<AuditLog>> GetByDateRangeAsync(DateTime from, DateTime to, int skip = 0, int take = 50, CancellationToken ct = default);
