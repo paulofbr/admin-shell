@@ -1,3 +1,4 @@
+using AdminShell.Contracts;
 using AdminShell.Core.Interfaces;
 
 namespace AdminShell.Infrastructure.Services;
@@ -21,7 +22,7 @@ public abstract class BaseService<T, TDto, TCreate, TUpdate> : IBaseService<TDto
         AuditLog = auditLog;
     }
 
-    public abstract Task<PagedResult<TDto>> GetAllAsync(int skip, int take, string? currentUser, CancellationToken ct = default);
+    public abstract Task<PagedResult<TDto>> GetAllAsync(QuerySpecification query, string? currentUser, CancellationToken ct = default);
     
     public abstract Task<TDto?> GetByIdAsync(Guid id, CancellationToken ct = default);
     

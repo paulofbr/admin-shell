@@ -1,40 +1,21 @@
+using AdminShell.Contracts;
 using AdminShell.Core.Entities;
 using AdminShell.Core.Interfaces;
+using AdminShell.Infrastructure.Data;
 using Dapper;
 
 namespace AdminShell.Infrastructure.Data.Repositories;
 
-public class PermissionRepository : IPermissionRepository
+public class PermissionRepository : RepositoryBase<Permission>, IPermissionRepository
 {
-    private readonly IDbConnectionFactory _connectionFactory;
-
-    public PermissionRepository(IDbConnectionFactory connectionFactory)
+    public PermissionRepository(IDbConnectionFactory connectionFactory, IPluginExtensionRegistry? extensionRegistry = null)
+        : base(connectionFactory, extensionRegistry)
     {
-        _connectionFactory = connectionFactory;
-    }
-
-    public async Task<IReadOnlyList<Permission>> GetAllAsync(CancellationToken ct = default)
-    {
-        using var db = _connectionFactory.CreateConnection();
-        db.Open();
-        var perms = await db.QueryAsync<Permission>(
-            "SELECT * FROM Permissions WHERE IsDeleted = 0 ORDER BY Resource, Action");
-        return perms.ToList();
-    }
-
-    public async Task<Permission?> GetByIdAsync(Guid id, CancellationToken ct = default)
-    {
-        using var db = _connectionFactory.CreateConnection();
-        db.Open();
-        return await db.QueryFirstOrDefaultAsync<Permission>(
-            "SELECT * FROM Permissions WHERE Id = @Id AND IsDeleted = 0",
-            new { Id = id });
     }
 
     public async Task<Permission?> GetByCodeAsync(string code, CancellationToken ct = default)
     {
-        using var db = _connectionFactory.CreateConnection();
-        db.Open();
+        using var db = CreateConnection();
         return await db.QueryFirstOrDefaultAsync<Permission>(
             "SELECT * FROM Permissions WHERE Code = @Code AND IsDeleted = 0",
             new { Code = code });
@@ -42,8 +23,7 @@ public class PermissionRepository : IPermissionRepository
 
     public async Task<IReadOnlyList<Permission>> GetByRoleIdAsync(Guid roleId, CancellationToken ct = default)
     {
-        using var db = _connectionFactory.CreateConnection();
-        db.Open();
+        using var db = CreateConnection();
         var perms = await db.QueryAsync<Permission>(
             @"SELECT p.Id, p.Code, p.Resource, p.Action, p.Description,
                      p.IsDeleted, p.DeletedAt, p.CreatedAt, p.CreatedBy
@@ -57,8 +37,7 @@ public class PermissionRepository : IPermissionRepository
 
     public async Task AssignToRoleAsync(Guid roleId, Guid permissionId, CancellationToken ct = default)
     {
-        using var db = _connectionFactory.CreateConnection();
-        db.Open();
+        using var db = CreateConnection();
         await db.ExecuteAsync(
             "INSERT INTO RolePermissions (RoleId, PermissionId) VALUES (@RoleId, @PermissionId)",
             new { RoleId = roleId, PermissionId = permissionId });
@@ -66,8 +45,7 @@ public class PermissionRepository : IPermissionRepository
 
     public async Task RemoveFromRoleAsync(Guid roleId, Guid permissionId, CancellationToken ct = default)
     {
-        using var db = _connectionFactory.CreateConnection();
-        db.Open();
+        using var db = CreateConnection();
         await db.ExecuteAsync(
             "DELETE FROM RolePermissions WHERE RoleId = @RoleId AND PermissionId = @PermissionId",
             new { RoleId = roleId, PermissionId = permissionId });

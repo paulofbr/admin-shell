@@ -2,6 +2,7 @@ using AdminShell.Contracts;
 using AdminShell.Core.Interfaces;
 using AdminShell.Infrastructure.Data;
 using AdminShell.Infrastructure.Data.Repositories;
+using AdminShell.Infrastructure.Mappings;
 using AdminShell.Infrastructure.PluginSystem;
 using AdminShell.Infrastructure.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -36,6 +37,9 @@ public static class DependencyInjection
         services.AddScoped<IPermissionRepository, PermissionRepository>();
         services.AddScoped<ISettingsRepository, SettingsRepository>();
         services.AddScoped<IAuditLogRepository, AuditLogRepository>();
+
+        // Mapper
+        services.AddSingleton<AppMapper>();
 
         // Services
         services.AddSingleton<ICacheService, CacheService>();

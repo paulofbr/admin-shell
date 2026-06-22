@@ -1,40 +1,29 @@
+using AdminShell.Contracts;
 using AdminShell.Core.Entities;
 using AdminShell.Core.Interfaces;
+using AdminShell.Infrastructure.Data;
 using Dapper;
 
 namespace AdminShell.Infrastructure.Data.Repositories;
 
-public class SettingsRepository : ISettingsRepository
+public class SettingsRepository : RepositoryBase<AppSetting>, ISettingsRepository
 {
-    private readonly IDbConnectionFactory _connectionFactory;
-
-    public SettingsRepository(IDbConnectionFactory connectionFactory)
+    public SettingsRepository(IDbConnectionFactory connectionFactory, IPluginExtensionRegistry? extensionRegistry = null)
+        : base(connectionFactory, extensionRegistry)
     {
-        _connectionFactory = connectionFactory;
     }
 
     public async Task<AppSetting?> GetByKeyAsync(string key, CancellationToken ct = default)
     {
-        using var db = _connectionFactory.CreateConnection();
-        db.Open();
+        using var db = CreateConnection();
         return await db.QueryFirstOrDefaultAsync<AppSetting>(
             "SELECT * FROM Settings WHERE [Key] = @Key AND IsDeleted = 0",
             new { Key = key });
     }
 
-    public async Task<IReadOnlyList<AppSetting>> GetAllAsync(CancellationToken ct = default)
-    {
-        using var db = _connectionFactory.CreateConnection();
-        db.Open();
-        var settings = await db.QueryAsync<AppSetting>(
-            "SELECT * FROM Settings WHERE IsDeleted = 0 ORDER BY Category, [Key]");
-        return settings.ToList();
-    }
-
     public async Task<IReadOnlyList<AppSetting>> GetByCategoryAsync(string category, CancellationToken ct = default)
     {
-        using var db = _connectionFactory.CreateConnection();
-        db.Open();
+        using var db = CreateConnection();
         var settings = await db.QueryAsync<AppSetting>(
             "SELECT * FROM Settings WHERE Category = @Cat AND IsDeleted = 0 ORDER BY [Key]",
             new { Cat = category });
@@ -43,8 +32,7 @@ public class SettingsRepository : ISettingsRepository
 
     public async Task<IReadOnlyList<string>> GetCategoriesAsync(CancellationToken ct = default)
     {
-        using var db = _connectionFactory.CreateConnection();
-        db.Open();
+        using var db = CreateConnection();
         var cats = await db.QueryAsync<string>(
             "SELECT DISTINCT Category FROM Settings WHERE IsDeleted = 0 ORDER BY Category");
         return cats.ToList();
@@ -52,8 +40,7 @@ public class SettingsRepository : ISettingsRepository
 
     public async Task<AppSetting> SetAsync(AppSetting setting, CancellationToken ct = default)
     {
-        using var db = _connectionFactory.CreateConnection();
-        db.Open();
+        using var db = CreateConnection();
 
         var existing = await db.QueryFirstOrDefaultAsync<AppSetting>(
             "SELECT * FROM Settings WHERE [Key] = @Key AND IsDeleted = 0",
@@ -61,7 +48,6 @@ public class SettingsRepository : ISettingsRepository
 
         if (existing != null)
         {
-            // Update
             existing.Value = setting.Value;
             existing.UpdatedAt = DateTime.UtcNow;
             existing.UpdatedBy = setting.UpdatedBy ?? setting.CreatedBy;
@@ -74,7 +60,6 @@ public class SettingsRepository : ISettingsRepository
         }
         else
         {
-            // Insert
             setting.Id = Guid.NewGuid();
             setting.CreatedAt = DateTime.UtcNow;
 

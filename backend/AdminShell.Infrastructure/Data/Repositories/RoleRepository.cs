@@ -1,78 +1,68 @@
 using AdminShell.Contracts;
 using AdminShell.Core.Entities;
 using AdminShell.Core.Interfaces;
+using AdminShell.Infrastructure.Data;
 using Dapper;
 
 namespace AdminShell.Infrastructure.Data.Repositories;
 
-public class RoleRepository : IRoleRepository
+public class RoleRepository : RepositoryBase<Role>, IRoleRepository
 {
-    private const string EntityName = "Role";
-
-    private readonly IDbConnectionFactory _connectionFactory;
-    private readonly IPluginExtensionRegistry _extensionRegistry;
-
-    public RoleRepository(IDbConnectionFactory connectionFactory, IPluginExtensionRegistry extensionRegistry)
+    public RoleRepository(IDbConnectionFactory connectionFactory, IPluginExtensionRegistry? extensionRegistry = null)
+        : base(connectionFactory, extensionRegistry)
     {
-        _connectionFactory = connectionFactory;
-        _extensionRegistry = extensionRegistry;
     }
 
-    public async Task<Role?> GetByIdAsync(Guid id, CancellationToken ct = default)
+    public override async Task<Role?> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
-        using var db = _connectionFactory.CreateConnection();
-        db.Open();
+        using var db = CreateConnection();
         var role = await db.QueryFirstOrDefaultAsync<Role>(
             "SELECT * FROM Roles WHERE Id = @Id AND IsDeleted = 0",
             new { Id = id });
         if (role is not null)
         {
             role.Permissions = await GetRolePermissionsAsync(db, id, ct);
-            await HydrateExtensionFieldsAsync(db, role, ct);
+            await AfterLoadAsync(db, role, ct);
         }
         return role;
     }
 
     public async Task<Role?> GetByNameAsync(string name, CancellationToken ct = default)
     {
-        using var db = _connectionFactory.CreateConnection();
-        db.Open();
+        using var db = CreateConnection();
         var role = await db.QueryFirstOrDefaultAsync<Role>(
             "SELECT * FROM Roles WHERE Name = @Name AND IsDeleted = 0",
             new { Name = name });
         if (role is not null)
         {
             role.Permissions = await GetRolePermissionsAsync(db, role.Id, ct);
-            await HydrateExtensionFieldsAsync(db, role, ct);
+            await AfterLoadAsync(db, role, ct);
         }
         return role;
     }
 
-    public async Task<IReadOnlyList<Role>> GetAllAsync(CancellationToken ct = default)
+    public override async Task<IReadOnlyList<Role>> GetAllAsync(CancellationToken ct = default)
     {
-        using var db = _connectionFactory.CreateConnection();
-        db.Open();
+        using var db = CreateConnection();
         var roles = (await db.QueryAsync<Role>(
             "SELECT * FROM Roles WHERE IsDeleted = 0 ORDER BY Name")).ToList();
         foreach (var role in roles)
         {
             role.Permissions = await GetRolePermissionsAsync(db, role.Id, ct);
-            await HydrateExtensionFieldsAsync(db, role, ct);
+            await AfterLoadAsync(db, role, ct);
         }
         return roles;
     }
 
-    public async Task<int> GetCountAsync(CancellationToken ct = default)
+    public override async Task<int> GetCountAsync(CancellationToken ct = default)
     {
-        using var db = _connectionFactory.CreateConnection();
-        db.Open();
+        using var db = CreateConnection();
         return await db.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM Roles WHERE IsDeleted = 0");
     }
 
-    public async Task<Role> AddAsync(Role role, CancellationToken ct = default)
+    public override async Task<Role> AddAsync(Role role, CancellationToken ct = default)
     {
-        using var db = _connectionFactory.CreateConnection();
-        db.Open();
+        using var db = CreateConnection();
         var definitions = GetDefinitions();
         var parameters = new DynamicParameters();
         var columns = new List<string> { "Id", "Name", "Description", "IsDeleted", "CreatedAt", "CreatedBy" };
@@ -89,14 +79,13 @@ public class RoleRepository : IRoleRepository
         await db.ExecuteAsync(
             $"INSERT INTO Roles ({string.Join(", ", columns)}) VALUES ({string.Join(", ", values)})",
             parameters);
-        await HydrateExtensionFieldsAsync(db, role, ct);
+        await AfterLoadAsync(db, role, ct);
         return role;
     }
 
-    public async Task UpdateAsync(Role role, CancellationToken ct = default)
+    public override async Task UpdateAsync(Role role, CancellationToken ct = default)
     {
-        using var db = _connectionFactory.CreateConnection();
-        db.Open();
+        using var db = CreateConnection();
         var definitions = GetDefinitions();
         var parameters = new DynamicParameters();
         var assignments = new List<string> { "Name = @Name", "Description = @Description" };
@@ -110,19 +99,18 @@ public class RoleRepository : IRoleRepository
         await db.ExecuteAsync(
             $"UPDATE Roles SET {string.Join(", ", assignments)} WHERE Id = @Id",
             parameters);
-        await HydrateExtensionFieldsAsync(db, role, ct);
+        await AfterLoadAsync(db, role, ct);
     }
 
-    public async Task DeleteAsync(Role role, CancellationToken ct = default)
+    public override async Task DeleteAsync(Role role, CancellationToken ct = default)
     {
-        using var db = _connectionFactory.CreateConnection();
-        db.Open();
+        using var db = CreateConnection();
         await db.ExecuteAsync(
             "UPDATE Roles SET IsDeleted = 1, DeletedAt = @DeletedAt WHERE Id = @Id",
             new { role.Id, DeletedAt = DateTime.UtcNow });
     }
 
-    private static async Task<List<Permission>> GetRolePermissionsAsync(System.Data.IDbConnection db, Guid roleId, CancellationToken ct)
+    public static async Task<List<Permission>> GetRolePermissionsAsync(System.Data.IDbConnection db, Guid roleId, CancellationToken ct)
     {
         var permissions = await db.QueryAsync<Permission>(
             @"SELECT p.Id, p.Code, p.Resource, p.Action, p.Description,
@@ -134,44 +122,6 @@ public class RoleRepository : IRoleRepository
             new { RoleId = roleId });
         return permissions.ToList();
     }
-
-    private async Task HydrateExtensionFieldsAsync(System.Data.IDbConnection db, Role role, CancellationToken ct)
-    {
-        var definitions = GetDefinitions();
-        if (definitions.Count == 0)
-            return;
-
-        var row = await db.QueryFirstOrDefaultAsync(
-            $"SELECT {string.Join(", ", definitions.Select(d => d.QuotedColumnName))} FROM Roles WHERE Id = @Id",
-            new { Id = role.Id });
-
-        if (row is null)
-            return;
-
-        var values = row as IDictionary<string, object?>;
-        if (values is null)
-            return;
-
-        role.ExtensionFields = definitions.Select(definition =>
-        {
-            var rawValue = values.TryGetValue(definition.ColumnName, out var value) ? value : null;
-            return new ExtensionField
-            {
-                Name = definition.Name,
-                Value = ConvertValue(rawValue, definition.Type),
-                Type = definition.Type.ToString(),
-                Required = definition.Required,
-                DefaultValue = definition.DefaultValue,
-                Label = definition.Label,
-                PossibleValues = definition.PossibleValues,
-                FrontEndValidator = definition.FrontEndValidator,
-                Slot = definition.Slot
-            };
-        }).ToList();
-    }
-
-    private IReadOnlyList<EntityExtensionFieldDefinition> GetDefinitions()
-        => _extensionRegistry.GetExtensionFieldsForEntity(EntityName).ToList();
 
     private static void AddExtensionFieldsToParameters(
         DynamicParameters parameters,
@@ -216,19 +166,6 @@ public class RoleRepository : IRoleRepository
         {
             EntityExtensionFieldType.Boolean => value is bool boolean ? boolean : bool.TryParse(Convert.ToString(value), out var parsedBool) ? parsedBool : value,
             EntityExtensionFieldType.Number => value is decimal or double or int or long ? value : decimal.TryParse(Convert.ToString(value), out var parsedDecimal) ? parsedDecimal : value,
-            _ => value
-        };
-    }
-
-    private static object? ConvertValue(object? value, EntityExtensionFieldType type)
-    {
-        if (value is null || value is DBNull)
-            return null;
-
-        return type switch
-        {
-            EntityExtensionFieldType.Boolean => value is bool boolean ? boolean : bool.TryParse(Convert.ToString(value), out var parsedBool) && parsedBool,
-            EntityExtensionFieldType.Number => value is decimal decimalValue ? decimalValue : decimal.TryParse(Convert.ToString(value), out var parsedDecimal) ? parsedDecimal : value,
             _ => value
         };
     }
