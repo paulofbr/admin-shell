@@ -2,7 +2,9 @@ using AdminShell.Contracts;
 using AdminShell.Core.Entities;
 using AdminShell.Core.Interfaces;
 using AdminShell.Infrastructure.Data;
-using Dapper;
+using SqlKata;
+using SqlKata.Compilers;
+using SqlKata.Execution;
 
 namespace AdminShell.Infrastructure.Data.Repositories;
 
@@ -16,9 +18,10 @@ public class RoleRepository : RepositoryBase<Role>, IRoleRepository
     public override async Task<Role?> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
         using var db = CreateConnection();
-        var role = await db.QueryFirstOrDefaultAsync<Role>(
-            "SELECT * FROM Roles WHERE Id = @Id AND IsDeleted = 0",
-            new { Id = id });
+        var qf = CreateQueryFactory(db);
+        var query = new Query(TableName).Where("Id", id);
+        ApplySoftDelete(query);
+        var role = await qf.FirstOrDefaultAsync<Role>(query, null, null, ct);
         if (role is not null)
         {
             role.Permissions = await GetRolePermissionsAsync(db, id, ct);
@@ -30,9 +33,10 @@ public class RoleRepository : RepositoryBase<Role>, IRoleRepository
     public async Task<Role?> GetByNameAsync(string name, CancellationToken ct = default)
     {
         using var db = CreateConnection();
-        var role = await db.QueryFirstOrDefaultAsync<Role>(
-            "SELECT * FROM Roles WHERE Name = @Name AND IsDeleted = 0",
-            new { Name = name });
+        var qf = CreateQueryFactory(db);
+        var query = new Query(TableName).Where("Name", name);
+        ApplySoftDelete(query);
+        var role = await qf.FirstOrDefaultAsync<Role>(query, null, null, ct);
         if (role is not null)
         {
             role.Permissions = await GetRolePermissionsAsync(db, role.Id, ct);
@@ -44,8 +48,10 @@ public class RoleRepository : RepositoryBase<Role>, IRoleRepository
     public override async Task<IReadOnlyList<Role>> GetAllAsync(CancellationToken ct = default)
     {
         using var db = CreateConnection();
-        var roles = (await db.QueryAsync<Role>(
-            "SELECT * FROM Roles WHERE IsDeleted = 0 ORDER BY Name")).ToList();
+        var qf = CreateQueryFactory(db);
+        var query = new Query(TableName).OrderBy("Name");
+        ApplySoftDelete(query);
+        var roles = (await qf.GetAsync<Role>(query, null, null, ct)).ToList();
         foreach (var role in roles)
         {
             role.Permissions = await GetRolePermissionsAsync(db, role.Id, ct);
@@ -57,28 +63,37 @@ public class RoleRepository : RepositoryBase<Role>, IRoleRepository
     public override async Task<int> GetCountAsync(CancellationToken ct = default)
     {
         using var db = CreateConnection();
-        return await db.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM Roles WHERE IsDeleted = 0");
+        var qf = CreateQueryFactory(db);
+        var query = new Query(TableName).AsCount();
+        ApplySoftDelete(query);
+        var result = await qf.FirstOrDefaultAsync<IDictionary<string, object?>>(query, null, null, ct);
+        return Convert.ToInt32(result?.Values.FirstOrDefault() ?? 0);
     }
 
     public override async Task<Role> AddAsync(Role role, CancellationToken ct = default)
     {
         using var db = CreateConnection();
+        var qf = CreateQueryFactory(db);
+        var data = new Dictionary<string, object>
+        {
+            ["Id"] = role.Id,
+            ["Name"] = role.Name,
+            ["Description"] = (object?)role.Description ?? DBNull.Value,
+            ["IsDeleted"] = 0,
+            ["CreatedAt"] = role.CreatedAt,
+            ["CreatedBy"] = (object?)role.CreatedBy ?? DBNull.Value
+        };
+
         var definitions = GetDefinitions();
-        var parameters = new DynamicParameters();
-        var columns = new List<string> { "Id", "Name", "Description", "IsDeleted", "CreatedAt", "CreatedBy" };
-        var values = new List<string> { "@Id", "@Name", "@Description", "0", "@CreatedAt", "@CreatedBy" };
+        foreach (var definition in definitions)
+        {
+            var field = role.ExtensionFields.FirstOrDefault(f =>
+                string.Equals(f.Name, definition.Name, StringComparison.OrdinalIgnoreCase));
+            var value = field?.Value ?? definition.DefaultValue;
+            data[definition.ColumnName] = NormalizeValue(value, definition.Type) ?? DBNull.Value;
+        }
 
-        parameters.Add("Id", role.Id);
-        parameters.Add("Name", role.Name);
-        parameters.Add("Description", role.Description);
-        parameters.Add("CreatedAt", role.CreatedAt);
-        parameters.Add("CreatedBy", role.CreatedBy);
-
-        AddExtensionFieldsToParameters(parameters, definitions, role.ExtensionFields, columns, values);
-
-        await db.ExecuteAsync(
-            $"INSERT INTO Roles ({string.Join(", ", columns)}) VALUES ({string.Join(", ", values)})",
-            parameters);
+        await qf.ExecuteAsync(new Query(TableName).AsInsert(data), null, null, ct);
         await AfterLoadAsync(db, role, ct);
         return role;
     }
@@ -86,75 +101,51 @@ public class RoleRepository : RepositoryBase<Role>, IRoleRepository
     public override async Task UpdateAsync(Role role, CancellationToken ct = default)
     {
         using var db = CreateConnection();
+        var qf = CreateQueryFactory(db);
+        var data = new Dictionary<string, object>
+        {
+            ["Name"] = role.Name,
+            ["Description"] = (object?)role.Description ?? DBNull.Value
+        };
+
         var definitions = GetDefinitions();
-        var parameters = new DynamicParameters();
-        var assignments = new List<string> { "Name = @Name", "Description = @Description" };
+        foreach (var definition in definitions)
+        {
+            var field = role.ExtensionFields.FirstOrDefault(f =>
+                string.Equals(f.Name, definition.Name, StringComparison.OrdinalIgnoreCase));
+            var value = field?.Value ?? definition.DefaultValue;
+            data[definition.ColumnName] = NormalizeValue(value, definition.Type) ?? DBNull.Value;
+        }
 
-        parameters.Add("Id", role.Id);
-        parameters.Add("Name", role.Name);
-        parameters.Add("Description", role.Description);
-
-        AddExtensionFieldsToAssignments(parameters, definitions, role.ExtensionFields, assignments);
-
-        await db.ExecuteAsync(
-            $"UPDATE Roles SET {string.Join(", ", assignments)} WHERE Id = @Id",
-            parameters);
+        await qf.ExecuteAsync(new Query(TableName).Where("Id", role.Id).AsUpdate(data), null, null, ct);
         await AfterLoadAsync(db, role, ct);
     }
 
     public override async Task DeleteAsync(Role role, CancellationToken ct = default)
     {
         using var db = CreateConnection();
-        await db.ExecuteAsync(
-            "UPDATE Roles SET IsDeleted = 1, DeletedAt = @DeletedAt WHERE Id = @Id",
-            new { role.Id, DeletedAt = DateTime.UtcNow });
+        var qf = CreateQueryFactory(db);
+        await qf.ExecuteAsync(
+            new Query(TableName).Where("Id", role.Id).AsUpdate(new Dictionary<string, object>
+            {
+                ["IsDeleted"] = 1,
+                ["DeletedAt"] = DateTime.UtcNow
+            }),
+            null, null, ct);
     }
 
     public static async Task<List<Permission>> GetRolePermissionsAsync(System.Data.IDbConnection db, Guid roleId, CancellationToken ct)
     {
-        var permissions = await db.QueryAsync<Permission>(
-            @"SELECT p.Id, p.Code, p.Resource, p.Action, p.Description,
-                     p.IsDeleted, p.DeletedAt, p.CreatedAt, p.CreatedBy
-              FROM Permissions p
-              INNER JOIN RolePermissions ON p.Id = RolePermissions.PermissionId
-              WHERE RolePermissions.RoleId = @RoleId AND p.IsDeleted = 0
-              ORDER BY p.Resource, p.Action",
-            new { RoleId = roleId });
-        return permissions.ToList();
-    }
-
-    private static void AddExtensionFieldsToParameters(
-        DynamicParameters parameters,
-        IReadOnlyList<EntityExtensionFieldDefinition> definitions,
-        IReadOnlyList<ExtensionField> extensionFields,
-        ICollection<string> columns,
-        ICollection<string> values)
-    {
-        foreach (var definition in definitions)
-        {
-            var field = extensionFields.FirstOrDefault(f => string.Equals(f.Name, definition.Name, StringComparison.OrdinalIgnoreCase));
-            var value = field?.Value ?? definition.DefaultValue;
-            var columnName = definition.ColumnName;
-            columns.Add(definition.QuotedColumnName);
-            values.Add($"@{columnName}");
-            parameters.Add(columnName, NormalizeValue(value, definition.Type));
-        }
-    }
-
-    private static void AddExtensionFieldsToAssignments(
-        DynamicParameters parameters,
-        IReadOnlyList<EntityExtensionFieldDefinition> definitions,
-        IReadOnlyList<ExtensionField> extensionFields,
-        ICollection<string> assignments)
-    {
-        foreach (var definition in definitions)
-        {
-            var field = extensionFields.FirstOrDefault(f => string.Equals(f.Name, definition.Name, StringComparison.OrdinalIgnoreCase));
-            var value = field?.Value ?? definition.DefaultValue;
-            var columnName = definition.ColumnName;
-            assignments.Add($"{definition.QuotedColumnName} = @{columnName}");
-            parameters.Add(columnName, NormalizeValue(value, definition.Type));
-        }
+        var qf = new QueryFactory(db, new SqlServerCompiler());
+        var query = new Query("Permissions AS p")
+            .Select("p.Id", "p.Code", "p.Resource", "p.Action", "p.Description",
+                     "p.IsDeleted", "p.DeletedAt", "p.CreatedAt", "p.CreatedBy")
+            .Join("RolePermissions", "p.Id", "RolePermissions.PermissionId")
+            .Where("RolePermissions.RoleId", roleId)
+            .Where("p.IsDeleted", 0)
+            .OrderBy("p.Resource")
+            .OrderBy("p.Action");
+        return (await qf.GetAsync<Permission>(query, null, null, ct)).ToList();
     }
 
     private static object? NormalizeValue(object? value, EntityExtensionFieldType type)

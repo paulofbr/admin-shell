@@ -2,7 +2,9 @@ using AdminShell.Contracts;
 using AdminShell.Core.Entities;
 using AdminShell.Core.Interfaces;
 using AdminShell.Infrastructure.Data;
-using Dapper;
+using SqlKata;
+using SqlKata.Compilers;
+using SqlKata.Execution;
 
 namespace AdminShell.Infrastructure.Data.Repositories;
 
@@ -16,9 +18,10 @@ public class UserRepository : RepositoryBase<User>, IUserRepository
     public override async Task<User?> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
         using var db = CreateConnection();
-        var user = await db.QueryFirstOrDefaultAsync<User>(
-            "SELECT * FROM Users WHERE Id = @Id AND IsDeleted = 0",
-            new { Id = id });
+        var qf = CreateQueryFactory(db);
+        var query = new Query(TableName).Where("Id", id);
+        ApplySoftDelete(query);
+        var user = await qf.FirstOrDefaultAsync<User>(query, null, null, ct);
         if (user is not null)
         {
             user.Roles = await GetUserRolesAsync(db, id, ct);
@@ -30,9 +33,10 @@ public class UserRepository : RepositoryBase<User>, IUserRepository
     public async Task<User?> GetByEmailAsync(string email, CancellationToken ct = default)
     {
         using var db = CreateConnection();
-        var user = await db.QueryFirstOrDefaultAsync<User>(
-            "SELECT * FROM Users WHERE Email = @Email AND IsDeleted = 0",
-            new { Email = email });
+        var qf = CreateQueryFactory(db);
+        var query = new Query(TableName).Where("Email", email);
+        ApplySoftDelete(query);
+        var user = await qf.FirstOrDefaultAsync<User>(query, null, null, ct);
         if (user is not null)
         {
             user.Roles = await GetUserRolesAsync(db, user.Id, ct);
@@ -44,9 +48,10 @@ public class UserRepository : RepositoryBase<User>, IUserRepository
     public async Task<User?> GetByUsernameAsync(string username, CancellationToken ct = default)
     {
         using var db = CreateConnection();
-        var user = await db.QueryFirstOrDefaultAsync<User>(
-            "SELECT * FROM Users WHERE Username = @Username AND IsDeleted = 0",
-            new { Username = username });
+        var qf = CreateQueryFactory(db);
+        var query = new Query(TableName).Where("Username", username);
+        ApplySoftDelete(query);
+        var user = await qf.FirstOrDefaultAsync<User>(query, null, null, ct);
         if (user is not null)
         {
             user.Roles = await GetUserRolesAsync(db, user.Id, ct);
@@ -58,31 +63,18 @@ public class UserRepository : RepositoryBase<User>, IUserRepository
     public async Task<IReadOnlyList<User>> GetAllAsync(int skip = 0, int take = 20, string? email = null, string? username = null, string? displayName = null, CancellationToken ct = default)
     {
         using var db = CreateConnection();
-
-        var sql = @"SELECT * FROM Users WHERE IsDeleted = 0";
-        var parameters = new DynamicParameters();
-        parameters.Add("@Skip", skip);
-        parameters.Add("@Take", take);
+        var qf = CreateQueryFactory(db);
+        var query = new Query(TableName).OrderBy("CreatedAt").Skip(skip).Take(take);
+        ApplySoftDelete(query);
 
         if (!string.IsNullOrEmpty(email))
-        {
-            sql += " AND Email LIKE @Email";
-            parameters.Add("@Email", $"%{email}%");
-        }
+            query.WhereLike("Email", $"%{email}%");
         if (!string.IsNullOrEmpty(username))
-        {
-            sql += " AND Username LIKE @Username";
-            parameters.Add("@Username", $"%{username}%");
-        }
+            query.WhereLike("Username", $"%{username}%");
         if (!string.IsNullOrEmpty(displayName))
-        {
-            sql += " AND DisplayName LIKE @DisplayName";
-            parameters.Add("@DisplayName", $"%{displayName}%");
-        }
+            query.WhereLike("DisplayName", $"%{displayName}%");
 
-        sql += " ORDER BY CreatedAt ASC OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY";
-
-        var users = (await db.QueryAsync<User>(sql, parameters)).ToList();
+        var users = (await qf.GetAsync<User>(query, null, null, ct)).ToList();
         foreach (var user in users)
         {
             user.Roles = await GetUserRolesAsync(db, user.Id, ct);
@@ -94,76 +86,71 @@ public class UserRepository : RepositoryBase<User>, IUserRepository
     public async Task<int> GetCountAsync(string? email = null, string? username = null, string? displayName = null, CancellationToken ct = default)
     {
         using var db = CreateConnection();
-
-        var sql = "SELECT COUNT(*) FROM Users WHERE IsDeleted = 0";
-        var parameters = new DynamicParameters();
+        var qf = CreateQueryFactory(db);
+        var query = new Query(TableName).AsCount();
+        ApplySoftDelete(query);
 
         if (!string.IsNullOrEmpty(email))
-        {
-            sql += " AND Email LIKE @Email";
-            parameters.Add("@Email", $"%{email}%");
-        }
+            query.WhereLike("Email", $"%{email}%");
         if (!string.IsNullOrEmpty(username))
-        {
-            sql += " AND Username LIKE @Username";
-            parameters.Add("@Username", $"%{username}%");
-        }
+            query.WhereLike("Username", $"%{username}%");
         if (!string.IsNullOrEmpty(displayName))
-        {
-            sql += " AND DisplayName LIKE @DisplayName";
-            parameters.Add("@DisplayName", $"%{displayName}%");
-        }
+            query.WhereLike("DisplayName", $"%{displayName}%");
 
-        return await db.ExecuteScalarAsync<int>(sql, parameters);
+        var result = await qf.FirstOrDefaultAsync<IDictionary<string, object?>>(query, null, null, ct);
+        return Convert.ToInt32(result?.Values.FirstOrDefault() ?? 0);
     }
 
     public async Task<int> GetActiveCountAsync(CancellationToken ct = default)
     {
         using var db = CreateConnection();
-        return await db.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM Users WHERE IsDeleted = 0 AND IsActive = 1");
+        var qf = CreateQueryFactory(db);
+        var query = new Query(TableName).AsCount().Where("IsDeleted", 0).Where("IsActive", 1);
+        var result = await qf.FirstOrDefaultAsync<IDictionary<string, object?>>(query, null, null, ct);
+        return Convert.ToInt32(result?.Values.FirstOrDefault() ?? 0);
     }
 
     public async Task<List<MonthlyGrowthPoint>> GetMonthlyGrowthAsync(int months = 6, CancellationToken ct = default)
     {
         using var db = CreateConnection();
-        var rows = await db.QueryAsync<MonthlyGrowthPoint>(
-            @"SELECT
-                FORMAT(CreatedAt, 'yyyy-MM') AS Month,
-                COUNT(*) AS Count
-              FROM Users
-              WHERE IsDeleted = 0 AND CreatedAt >= DATEADD(MONTH, -@Months, GETUTCDATE())
-              GROUP BY FORMAT(CreatedAt, 'yyyy-MM')
-              ORDER BY Month",
-            new { Months = months });
+        var qf = CreateQueryFactory(db);
+        var query = new Query(TableName)
+            .SelectRaw("FORMAT(CreatedAt, 'yyyy-MM') AS Month")
+            .SelectRaw("COUNT(*) AS Count")
+            .WhereRaw("CreatedAt >= DATEADD(MONTH, ?, GETUTCDATE())", months)
+            .GroupByRaw("FORMAT(CreatedAt, 'yyyy-MM')")
+            .OrderBy("Month");
+        ApplySoftDelete(query);
+        var rows = await qf.GetAsync<MonthlyGrowthPoint>(query, null, null, ct);
         return rows.ToList();
     }
 
     private static async Task<List<Role>> GetUserRolesAsync(System.Data.IDbConnection db, Guid userId, CancellationToken ct)
     {
-        var roles = await db.QueryAsync<Role>(
-            @"SELECT r.Id, r.Name, r.Description, r.IsDeleted, r.DeletedAt, r.CreatedAt, r.CreatedBy
-              FROM Roles r
-              INNER JOIN UserRoles ON r.Id = UserRoles.RoleId
-              WHERE UserRoles.UserId = @UserID",
-            new { UserID = userId });
-        var roleList = roles.ToList();
-        foreach (var role in roleList)
+        var qf = new QueryFactory(db, new SqlServerCompiler());
+        var query = new Query("Roles AS r")
+            .Select("r.Id", "r.Name", "r.Description", "r.IsDeleted", "r.DeletedAt", "r.CreatedAt", "r.CreatedBy")
+            .Join("UserRoles", "r.Id", "UserRoles.RoleId")
+            .Where("UserRoles.UserId", userId);
+        var roles = (await qf.GetAsync<Role>(query, null, null, ct)).ToList();
+        foreach (var role in roles)
         {
             role.Permissions = await GetRolePermissionsAsync(db, role.Id, ct);
         }
-        return roleList;
+        return roles;
     }
 
     private static async Task<List<Permission>> GetRolePermissionsAsync(System.Data.IDbConnection db, Guid roleId, CancellationToken ct)
     {
-        var permissions = await db.QueryAsync<Permission>(
-            @"SELECT p.Id, p.Code, p.Resource, p.Action, p.Description,
-                     p.IsDeleted, p.DeletedAt, p.CreatedAt, p.CreatedBy
-              FROM Permissions p
-              INNER JOIN RolePermissions ON p.Id = RolePermissions.PermissionId
-              WHERE RolePermissions.RoleId = @RoleId AND p.IsDeleted = 0
-              ORDER BY p.Resource, p.Action",
-            new { RoleId = roleId });
-        return permissions.ToList();
+        var qf = new QueryFactory(db, new SqlServerCompiler());
+        var query = new Query("Permissions AS p")
+            .Select("p.Id", "p.Code", "p.Resource", "p.Action", "p.Description",
+                     "p.IsDeleted", "p.DeletedAt", "p.CreatedAt", "p.CreatedBy")
+            .Join("RolePermissions", "p.Id", "RolePermissions.PermissionId")
+            .Where("RolePermissions.RoleId", roleId)
+            .Where("p.IsDeleted", 0)
+            .OrderBy("p.Resource")
+            .OrderBy("p.Action");
+        return (await qf.GetAsync<Permission>(query, null, null, ct)).ToList();
     }
 }

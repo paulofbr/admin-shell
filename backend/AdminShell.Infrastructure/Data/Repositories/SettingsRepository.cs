@@ -2,7 +2,9 @@ using AdminShell.Contracts;
 using AdminShell.Core.Entities;
 using AdminShell.Core.Interfaces;
 using AdminShell.Infrastructure.Data;
-using Dapper;
+using SqlKata;
+using SqlKata.Compilers;
+using SqlKata.Execution;
 
 namespace AdminShell.Infrastructure.Data.Repositories;
 
@@ -16,35 +18,39 @@ public class SettingsRepository : RepositoryBase<AppSetting>, ISettingsRepositor
     public async Task<AppSetting?> GetByKeyAsync(string key, CancellationToken ct = default)
     {
         using var db = CreateConnection();
-        return await db.QueryFirstOrDefaultAsync<AppSetting>(
-            "SELECT * FROM Settings WHERE [Key] = @Key AND IsDeleted = 0",
-            new { Key = key });
+        var qf = CreateQueryFactory(db);
+        var query = new Query(TableName).Where("Key", key);
+        ApplySoftDelete(query);
+        return await qf.FirstOrDefaultAsync<AppSetting>(query, null, null, ct);
     }
 
     public async Task<IReadOnlyList<AppSetting>> GetByCategoryAsync(string category, CancellationToken ct = default)
     {
         using var db = CreateConnection();
-        var settings = await db.QueryAsync<AppSetting>(
-            "SELECT * FROM Settings WHERE Category = @Cat AND IsDeleted = 0 ORDER BY [Key]",
-            new { Cat = category });
-        return settings.ToList();
+        var qf = CreateQueryFactory(db);
+        var query = new Query(TableName).Where("Category", category).OrderBy("Key");
+        ApplySoftDelete(query);
+        return (await qf.GetAsync<AppSetting>(query, null, null, ct)).ToList();
     }
 
     public async Task<IReadOnlyList<string>> GetCategoriesAsync(CancellationToken ct = default)
     {
         using var db = CreateConnection();
-        var cats = await db.QueryAsync<string>(
-            "SELECT DISTINCT Category FROM Settings WHERE IsDeleted = 0 ORDER BY Category");
-        return cats.ToList();
+        var qf = CreateQueryFactory(db);
+        var query = new Query(TableName).Select("Category").Distinct().OrderBy("Category");
+        ApplySoftDelete(query);
+        var rows = await qf.GetAsync<IDictionary<string, object?>>(query, null, null, ct);
+        return rows.Select(r => Convert.ToString(r["Category"])!).ToList();
     }
 
     public async Task<AppSetting> SetAsync(AppSetting setting, CancellationToken ct = default)
     {
         using var db = CreateConnection();
+        var qf = CreateQueryFactory(db);
 
-        var existing = await db.QueryFirstOrDefaultAsync<AppSetting>(
-            "SELECT * FROM Settings WHERE [Key] = @Key AND IsDeleted = 0",
-            new { setting.Key });
+        var existing = await qf.FirstOrDefaultAsync<AppSetting>(
+            new Query(TableName).Where("Key", setting.Key).Where("IsDeleted", 0),
+            null, null, ct);
 
         if (existing != null)
         {
@@ -52,9 +58,14 @@ public class SettingsRepository : RepositoryBase<AppSetting>, ISettingsRepositor
             existing.UpdatedAt = DateTime.UtcNow;
             existing.UpdatedBy = setting.UpdatedBy ?? setting.CreatedBy;
 
-            await db.ExecuteAsync(
-                "UPDATE Settings SET Value = @Value, UpdatedAt = @UpdatedAt, UpdatedBy = @UpdatedBy WHERE Id = @Id",
-                new { existing.Value, existing.UpdatedAt, existing.UpdatedBy, existing.Id });
+            await qf.ExecuteAsync(
+                new Query(TableName).Where("Id", existing.Id).AsUpdate(new Dictionary<string, object>
+                {
+                    ["Value"] = existing.Value,
+                    ["UpdatedAt"] = existing.UpdatedAt,
+                    ["UpdatedBy"] = existing.UpdatedBy
+                }),
+                null, null, ct);
 
             return existing;
         }
@@ -63,14 +74,20 @@ public class SettingsRepository : RepositoryBase<AppSetting>, ISettingsRepositor
             setting.Id = Guid.NewGuid();
             setting.CreatedAt = DateTime.UtcNow;
 
-            await db.ExecuteAsync(
-                @"INSERT INTO Settings (Id, [Key], Value, Category, Description, ValueType, IsDeleted, CreatedAt, CreatedBy)
-                  VALUES (@Id, @Key, @Value, @Category, @Description, @ValueType, 0, @CreatedAt, @CreatedBy)",
-                new
+            await qf.ExecuteAsync(
+                new Query(TableName).AsInsert(new Dictionary<string, object>
                 {
-                    setting.Id, setting.Key, setting.Value, setting.Category,
-                    setting.Description, setting.ValueType, setting.CreatedAt, setting.CreatedBy
-                });
+                    ["Id"] = setting.Id,
+                    ["Key"] = setting.Key,
+                    ["Value"] = setting.Value,
+                    ["Category"] = setting.Category,
+                    ["Description"] = (object?)setting.Description ?? DBNull.Value,
+                    ["ValueType"] = setting.ValueType,
+                    ["IsDeleted"] = 0,
+                    ["CreatedAt"] = setting.CreatedAt,
+                    ["CreatedBy"] = setting.CreatedBy
+                }),
+                null, null, ct);
 
             return setting;
         }

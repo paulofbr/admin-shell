@@ -156,7 +156,7 @@ public abstract class RepositoryBase<T> : IBaseRepository<T> where T : BaseEntit
     public virtual async Task<int> GetCountAsync(QuerySpecification? query = null, CancellationToken ct = default)
     {
         using var db = CreateConnection();
-        var compiler = new SqlServerCompiler();
+        var qf = CreateQueryFactory(db);
         var q = new Query(TableName).AsCount();
         ApplySoftDelete(q);
 
@@ -166,8 +166,10 @@ public abstract class RepositoryBase<T> : IBaseRepository<T> where T : BaseEntit
                 q.WhereLike(filter.Field, $"%{filter.Value}%");
         }
 
-        var compiled = compiler.Compile(q);
-        return await db.ExecuteScalarAsync<int>(compiled.Sql, compiled.NamedBindings);
+        var row = await qf.FirstOrDefaultAsync<IDictionary<string, object?>>(q, null, null, ct);
+        if (row is null) return 0;
+        var val = row.Values.FirstOrDefault();
+        return val is not null ? Convert.ToInt32(val) : 0;
     }
 
     public virtual async Task<T> AddAsync(T entity, CancellationToken ct = default)
