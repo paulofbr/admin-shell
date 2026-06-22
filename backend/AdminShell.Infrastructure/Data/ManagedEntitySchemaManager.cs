@@ -1,15 +1,17 @@
 using System.Collections.Immutable;
 using System.ComponentModel.DataAnnotations;
 using System.Data;
-
+using System.Data.Common;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using AdminShell.Contracts;
 using AdminShell.Core.Interfaces;
-using Dapper;
 using Microsoft.Extensions.Logging;
+using SqlKata;
+using SqlKata.Compilers;
+using SqlKata.Execution;
 
 namespace AdminShell.Infrastructure.Data;
 
@@ -231,13 +233,17 @@ public sealed class ManagedEntitySchemaManager : IManagedEntitySchemaManager
 
     private static async Task EnsureTableAsync(IDbConnection connection, ResolvedManagedEntity entity, CancellationToken ct)
     {
-        var exists = await connection.ExecuteScalarAsync<int>(
-            "SELECT COUNT(1) FROM sys.tables WHERE name = @TableName",
-            new { entity.TableName });
+        var qf = new QueryFactory(connection, new SqlServerCompiler());
+        var exists = await qf.Query("sys.tables")
+            .Where("name", entity.TableName)
+            .AsCount()
+            .FirstAsync<int>();
 
         if (exists == 0)
         {
-            await connection.ExecuteAsync(CreateTableSql(entity));
+            using var cmd = (DbCommand)connection.CreateCommand();
+            cmd.CommandText = CreateTableSql(entity);
+            await cmd.ExecuteNonQueryAsync();
             return;
         }
 
@@ -250,17 +256,19 @@ public sealed class ManagedEntitySchemaManager : IManagedEntitySchemaManager
 
     private static async Task EnsureColumnAsync(IDbConnection connection, string tableName, ResolvedManagedEntityProperty property, CancellationToken ct)
     {
-        var exists = await connection.ExecuteScalarAsync<int>(
-            @"SELECT COUNT(1)
-              FROM INFORMATION_SCHEMA.COLUMNS
-              WHERE TABLE_NAME = @TableName AND COLUMN_NAME = @ColumnName",
-            new { TableName = tableName, ColumnName = property.Name });
+        var qf = new QueryFactory(connection, new SqlServerCompiler());
+        var exists = await qf.Query("INFORMATION_SCHEMA.COLUMNS")
+            .Where("TABLE_NAME", tableName)
+            .Where("COLUMN_NAME", property.Name)
+            .AsCount()
+            .FirstAsync<int>();
 
         if (exists > 0)
             return;
 
-        await connection.ExecuteAsync(
-            $"ALTER TABLE {QuoteIdentifier(tableName)} ADD {QuoteIdentifier(property.Name)} {property.SqlType}{Nullability(property)}{DefaultValue(property)}");
+        using var cmd = (DbCommand)connection.CreateCommand();
+        cmd.CommandText = $"ALTER TABLE {QuoteIdentifier(tableName)} ADD {QuoteIdentifier(property.Name)} {property.SqlType}{Nullability(property)}{DefaultValue(property)}";
+        await cmd.ExecuteNonQueryAsync();
     }
 
     private static string CreateTableSql(ResolvedManagedEntity entity)

@@ -1,5 +1,4 @@
 using AdminShell.Infrastructure.Data;
-using Dapper;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace AdminShell.Infrastructure.Services;
@@ -21,7 +20,9 @@ public class DatabaseHealthCheck : IHealthCheck
         {
             using var db = _connectionFactory.CreateConnection();
             db.Open();
-            await db.ExecuteScalarAsync<int>("SELECT 1", ct);
+            using var cmd = db.CreateCommand();
+            cmd.CommandText = "SELECT 1";
+            cmd.ExecuteNonQuery();
             return Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy("Database connection is healthy");
         }
         catch (Exception ex)

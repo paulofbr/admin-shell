@@ -1,60 +1,44 @@
+using AdminShell.Contracts;
 using AdminShell.Core.Entities;
 using AdminShell.Core.Interfaces;
 
 namespace AdminShell.Infrastructure.Services;
 
-public class UserService : IUserService
+public class UserService : BaseService<User, UserDto, CreateUserRequest, UpdateUserRequest>, IUserService
 {
     private readonly IUserRepository _userRepository;
-    private readonly IAuditLogService _auditLog;
 
     public UserService(IUserRepository userRepository, IAuditLogService auditLog)
+        : base(userRepository, auditLog)
     {
         _userRepository = userRepository;
-        _auditLog = auditLog;
+    }
+
+    public override async Task<PagedResult<UserDto>> GetAllAsync(QuerySpecification query, string? currentUser, CancellationToken ct = default)
+    {
+        var email = query.Filters.FirstOrDefault(f => string.Equals(f.Field, "email", StringComparison.OrdinalIgnoreCase))?.Value;
+        var username = query.Filters.FirstOrDefault(f => string.Equals(f.Field, "username", StringComparison.OrdinalIgnoreCase))?.Value;
+        var displayName = query.Filters.FirstOrDefault(f => string.Equals(f.Field, "displayName", StringComparison.OrdinalIgnoreCase))?.Value;
+        return await GetAllAsync(query.Skip, query.Take, email, username, displayName, currentUser, ct);
     }
 
     public async Task<PagedResult<UserDto>> GetAllAsync(int skip, int take, string? email, string? username, string? displayName, string? currentUser, CancellationToken ct = default)
     {
         var users = await _userRepository.GetAllAsync(skip, take, email, username, displayName, ct);
         var total = await _userRepository.GetCountAsync(email, username, displayName, ct);
-        
-        var dtos = users.Select(u => new UserDto
-        {
-            Id = u.Id,
-            Email = u.Email ?? string.Empty,
-            Username = u.Username ?? string.Empty,
-            DisplayName = u.DisplayName ?? string.Empty,
-            AvatarUrl = u.AvatarUrl,
-            IsActive = u.IsActive,
-            CreatedAt = u.CreatedAt,
-            Roles = u.Roles.Select(r => new RoleDto { Id = r.Id, Name = r.Name ?? string.Empty }).ToList(),
-            ExtensionFields = u.ExtensionFields
-        }).ToList();
 
+        var dtos = MapToDtos(users);
         return new PagedResult<UserDto>(dtos, total, skip, take);
     }
 
-    public async Task<UserDto?> GetByIdAsync(Guid id, CancellationToken ct = default)
+    public override async Task<UserDto?> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
         var user = await _userRepository.GetByIdAsync(id, ct);
         if (user is null) return null;
-        
-        return new UserDto
-        {
-            Id = user.Id,
-            Email = user.Email ?? string.Empty,
-            Username = user.Username ?? string.Empty,
-            DisplayName = user.DisplayName ?? string.Empty,
-            AvatarUrl = user.AvatarUrl,
-            IsActive = user.IsActive,
-            CreatedAt = user.CreatedAt,
-            Roles = user.Roles.Select(r => new RoleDto { Id = r.Id, Name = r.Name ?? string.Empty }).ToList(),
-            ExtensionFields = user.ExtensionFields
-        };
+        return MapToDto(user);
     }
 
-    public async Task<Result<UserDto>> CreateAsync(CreateUserRequest request, string? currentUser, CancellationToken ct = default)
+    public override async Task<Result<UserDto>> CreateAsync(CreateUserRequest request, string? currentUser, CancellationToken ct = default)
     {
         var existingEmail = await _userRepository.GetByEmailAsync(request.Email, ct);
         if (existingEmail is not null)
@@ -78,27 +62,13 @@ public class UserService : IUserService
         };
 
         var created = await _userRepository.AddAsync(user, ct);
-        
-        await _auditLog.LogAsync("USER_CREATE", "User", created.Id.ToString(), currentUser ?? "system",
+        await LogAsync("USER_CREATE", "User", created.Id.ToString(), currentUser,
             details: $"Created user {created.Email}", ct: ct);
 
-        var dto = new UserDto
-        {
-            Id = created.Id,
-            Email = created.Email ?? string.Empty,
-            Username = created.Username ?? string.Empty,
-            DisplayName = created.DisplayName ?? string.Empty,
-            AvatarUrl = created.AvatarUrl,
-            IsActive = created.IsActive,
-            CreatedAt = created.CreatedAt,
-            Roles = created.Roles.Select(r => new RoleDto { Id = r.Id, Name = r.Name ?? string.Empty }).ToList(),
-            ExtensionFields = created.ExtensionFields
-        };
-
-        return Result<UserDto>.Success(dto);
+        return Result<UserDto>.Success(MapToDto(created));
     }
 
-    public async Task<Result<UserDto>> UpdateAsync(Guid id, UpdateUserRequest request, string? currentUser, CancellationToken ct = default)
+    public override async Task<Result<UserDto>> UpdateAsync(Guid id, UpdateUserRequest request, string? currentUser, CancellationToken ct = default)
     {
         var user = await _userRepository.GetByIdAsync(id, ct);
         if (user is null) return Result<UserDto>.Failure("User not found");
@@ -132,11 +102,27 @@ public class UserService : IUserService
         user.UpdatedBy = currentUser ?? "system";
 
         await _userRepository.UpdateAsync(user, ct);
-        
-        await _auditLog.LogAsync("USER_UPDATE", "User", id.ToString(), currentUser ?? "system",
+        await LogAsync("USER_UPDATE", "User", id.ToString(), currentUser,
             previousValue: previousEmail, newValue: user.Email, ct: ct);
 
-        var dto = new UserDto
+        return Result<UserDto>.Success(MapToDto(user));
+    }
+
+    public override async Task<Result> DeleteAsync(Guid id, string? currentUser, CancellationToken ct = default)
+    {
+        var user = await _userRepository.GetByIdAsync(id, ct);
+        if (user is null) return Result.Failure("User not found");
+
+        await _userRepository.DeleteAsync(user, ct);
+        await LogAsync("USER_DELETE", "User", id.ToString(), currentUser,
+            details: $"Deleted user {user.Email}", ct: ct);
+
+        return Result.Success();
+    }
+
+    private static UserDto MapToDto(User user)
+    {
+        return new UserDto
         {
             Id = user.Id,
             Email = user.Email ?? string.Empty,
@@ -148,20 +134,10 @@ public class UserService : IUserService
             Roles = user.Roles.Select(r => new RoleDto { Id = r.Id, Name = r.Name ?? string.Empty }).ToList(),
             ExtensionFields = user.ExtensionFields
         };
-
-        return Result<UserDto>.Success(dto);
     }
 
-    public async Task<Result> DeleteAsync(Guid id, string? currentUser, CancellationToken ct = default)
+    private static List<UserDto> MapToDtos(IEnumerable<User> users)
     {
-        var user = await _userRepository.GetByIdAsync(id, ct);
-        if (user is null) return Result.Failure("User not found");
-        
-        await _userRepository.DeleteAsync(user, ct);
-        
-        await _auditLog.LogAsync("USER_DELETE", "User", id.ToString(), currentUser ?? "system",
-            details: $"Deleted user {user.Email}", ct: ct);
-        
-        return Result.Success();
+        return users.Select(MapToDto).ToList();
     }
 }

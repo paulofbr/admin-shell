@@ -1,8 +1,11 @@
 using AdminShell.Contracts;
 using AdminShell.Core.Interfaces;
-using Dapper;
 using Microsoft.Extensions.Logging;
+using SqlKata;
+using SqlKata.Compilers;
+using SqlKata.Execution;
 using System.Data;
+using System.Data.Common;
 
 namespace AdminShell.Infrastructure.PluginSystem;
 
@@ -222,17 +225,19 @@ public class PluginExtensionRegistry : IPluginExtensionRegistry
 
     private static async Task EnsureExtensionFieldColumnAsync(IDbConnection connection, EntityExtensionFieldDefinition definition, CancellationToken ct)
     {
-        var exists = await connection.ExecuteScalarAsync<int>(
-            @"SELECT COUNT(1)
-              FROM INFORMATION_SCHEMA.COLUMNS
-              WHERE TABLE_NAME = @TableName AND COLUMN_NAME = @ColumnName",
-            new { definition.TableName, ColumnName = definition.ColumnName });
+        var qf = new QueryFactory(connection, new SqlServerCompiler());
+        var exists = await qf.Query("INFORMATION_SCHEMA.COLUMNS")
+            .Where("TABLE_NAME", definition.TableName)
+            .Where("COLUMN_NAME", definition.ColumnName)
+            .AsCount()
+            .FirstAsync<int>();
 
         if (exists > 0)
             return;
 
-        await connection.ExecuteAsync(
-            $"ALTER TABLE {definition.QuotedTableName} ADD {definition.QuotedColumnName} {definition.SqlType} NULL");
+        using var cmd = (DbCommand)connection.CreateCommand();
+        cmd.CommandText = $"ALTER TABLE {definition.QuotedTableName} ADD {definition.QuotedColumnName} {definition.SqlType} NULL";
+        await cmd.ExecuteNonQueryAsync();
     }
 
     public ExtensionRegistrySnapshot GetSnapshot()

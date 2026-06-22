@@ -2,10 +2,12 @@ using AdminShell.Contracts;
 using AdminShell.Core.Entities;
 using AdminShell.Infrastructure.Data.Migrations;
 using AdminShell.Infrastructure.PluginSystem;
-using Dapper;
 using DbUp;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
+using SqlKata;
+using SqlKata.Compilers;
+using SqlKata.Execution;
 using System.Data;
 
 namespace AdminShell.Infrastructure.Data;
@@ -71,22 +73,34 @@ public class DatabaseInitializer
         var dbNameFromCs = new SqlConnectionStringBuilder(_connectionFactory.CreateConnection().ConnectionString).InitialCatalog;
         dbName = string.IsNullOrWhiteSpace(dbNameFromCs) ? "AdminShell" : dbNameFromCs;
 
-        var exists = await masterDb.ExecuteScalarAsync<int>(
-            "SELECT COUNT(1) FROM sys.databases WHERE name = @Name",
-            new { Name = dbName });
+        var qf = new QueryFactory(masterDb, new SqlServerCompiler());
+        var countQuery = new Query("sys.databases")
+            .Where("name", dbName)
+            .AsCount();
+        var exists = await qf.FirstOrDefaultAsync<IDictionary<string, object?>>(countQuery, null, null, default) switch
+        {
+            { } d when d.Values.FirstOrDefault() is int i => i,
+            { } d when d.Values.FirstOrDefault() is long l => (int)l,
+            _ => 0
+        };
 
         if (exists == 0)
         {
-            await masterDb.ExecuteAsync($"CREATE DATABASE [{dbName}]");
+            using var cmd = masterDb.CreateCommand();
+            cmd.CommandText = $"CREATE DATABASE [{dbName}]";
+            await cmd.ExecuteNonQueryAsync();
             _logger.LogInformation("Created database {DbName}", dbName);
         }
     }
 
     private async Task SeedDataAsync(IDbConnection db)
     {
-        var adminRoleId = await db.QueryFirstOrDefaultAsync<Guid?>(
-            "SELECT TOP 1 Id FROM Roles WHERE Name = @Name",
-            new { Name = "Admin" });
+        var qf = new QueryFactory(db, new SqlServerCompiler());
+
+        var roleQuery = new Query("Roles")
+            .Where("Name", "Admin")
+            .Select("Id");
+        var adminRoleId = await qf.FirstOrDefaultAsync<Guid?>(roleQuery, null, null, default);
 
         var now = DateTime.UtcNow;
 
@@ -95,21 +109,22 @@ public class DatabaseInitializer
             var roleAdminId = Guid.NewGuid();
             var roleUserId = Guid.NewGuid();
 
-            await db.ExecuteAsync(
-                @"INSERT INTO Roles (Id, Name, Description, IsDeleted, CreatedAt, CreatedBy, UpdatedAt, UpdatedBy)
-                  VALUES (@Id, @Name, @Desc, 0, @Now, 'system', @Now, 'system')",
-                new[] {
-                    new { Id = roleAdminId, Name = "Admin", Desc = (string?)"Full system access", Now = now },
-                    new { Id = roleUserId, Name = "User", Desc = (string?)"Standard user access", Now = now }
-                });
+            var roleInsertQuery = new Query("Roles").AsInsert(new[]
+            {
+                new { Id = roleAdminId, Name = "Admin", Description = (string?)"Full system access", IsDeleted = 0, CreatedAt = now, CreatedBy = "system", UpdatedAt = now, UpdatedBy = "system" },
+                new { Id = roleUserId, Name = "User", Description = (string?)"Standard user access", IsDeleted = 0, CreatedAt = now, CreatedBy = "system", UpdatedAt = now, UpdatedBy = "system" }
+            });
+            await qf.ExecuteAsync(roleInsertQuery, null, null, default);
 
             adminRoleId = roleAdminId;
             _logger.LogInformation("Admin role seeded");
         }
 
-        var adminUserId = await db.QueryFirstOrDefaultAsync<Guid?>(
-            "SELECT TOP 1 Id FROM Users WHERE Email = @Email AND IsDeleted = 0",
-            new { Email = "admin@admin.com" });
+        var userQuery = new Query("Users")
+            .Where("Email", "admin@admin.com")
+            .Where("IsDeleted", 0)
+            .Select("Id");
+        var adminUserId = await qf.FirstOrDefaultAsync<Guid?>(userQuery, null, null, default);
 
         var passwordHash = BCrypt.Net.BCrypt.HashPassword("admin123");
 
@@ -117,41 +132,60 @@ public class DatabaseInitializer
         {
             adminUserId = Guid.NewGuid();
 
-            await db.ExecuteAsync(
-                @"INSERT INTO Users (Id, Email, Username, DisplayName, PasswordHash, IsActive, IsDeleted, CreatedAt, CreatedBy, UpdatedAt, UpdatedBy)
-                  VALUES (@Id, @Email, @Username, @DisplayName, @Pwd, 1, 0, @Now, 'system', @Now, 'system')",
-                new { Id = adminUserId, Email = "admin@admin.com", Username = "admin", DisplayName = (string?)"Administrator", Pwd = passwordHash, Now = now });
+            var userInsertQuery = new Query("Users").AsInsert(new
+            {
+                Id = adminUserId,
+                Email = "admin@admin.com",
+                Username = "admin",
+                DisplayName = (string?)"Administrator",
+                PasswordHash = passwordHash,
+                IsActive = 1,
+                IsDeleted = 0,
+                CreatedAt = now,
+                CreatedBy = "system",
+                UpdatedAt = now,
+                UpdatedBy = "system"
+            });
+            await qf.ExecuteAsync(userInsertQuery, null, null, default);
 
             _logger.LogInformation("Admin user seeded: admin@admin.com / admin123");
         }
         else
         {
-            await db.ExecuteAsync(
-                @"UPDATE Users
-                  SET PasswordHash = @Pwd,
-                      DisplayName = COALESCE(NULLIF(DisplayName, ''), @DisplayName),
-                      IsActive = 1,
-                      UpdatedAt = @Now,
-                      UpdatedBy = 'system'
-                  WHERE Id = @Id",
-                new { Id = adminUserId, Pwd = passwordHash, DisplayName = (string?)"Administrator", Now = now });
+            var userUpdateQuery = new Query("Users")
+                .Where("Id", adminUserId)
+                .AsUpdate(new
+                {
+                    PasswordHash = passwordHash,
+                    DisplayName = "Administrator",
+                    IsActive = 1,
+                    UpdatedAt = now,
+                    UpdatedBy = "system"
+                });
+            await qf.ExecuteAsync(userUpdateQuery, null, null, default);
         }
 
-        var hasAdminRole = await db.ExecuteScalarAsync<int>(
-            @"SELECT COUNT(1)
-              FROM UserRoles ur
-              INNER JOIN Roles r ON r.Id = ur.RoleId
-              WHERE ur.UserId = @UserId AND r.Name = 'Admin' AND r.IsDeleted = 0",
-            new { UserId = adminUserId });
+        var roleCountQuery = new Query("UserRoles AS ur")
+            .Join("Roles AS r", "r.Id", "ur.RoleId")
+            .Where("ur.UserId", adminUserId)
+            .Where("r.Name", "Admin")
+            .Where("r.IsDeleted", 0)
+            .AsCount();
+        var hasAdminRole = await qf.FirstOrDefaultAsync<IDictionary<string, object?>>(roleCountQuery, null, null, default) switch
+        {
+            { } d when d.Values.FirstOrDefault() is int i => i,
+            { } d when d.Values.FirstOrDefault() is long l => (int)l,
+            _ => 0
+        };
 
         if (hasAdminRole == 0)
         {
-            await db.ExecuteAsync(
-                @"INSERT INTO UserRoles (UserId, RoleId)
-                  SELECT @UserId, @RoleId
-                  WHERE NOT EXISTS (
-                      SELECT 1 FROM UserRoles WHERE UserId = @UserId AND RoleId = @RoleId)",
-                new { UserId = adminUserId, RoleId = adminRoleId });
+            var userRoleInsertQuery = new Query("UserRoles").AsInsert(new
+            {
+                UserId = adminUserId,
+                RoleId = adminRoleId
+            });
+            await qf.ExecuteAsync(userRoleInsertQuery, null, null, default);
 
             _logger.LogInformation("Admin role assigned to admin@admin.com");
         }
@@ -168,55 +202,74 @@ public class DatabaseInitializer
 
         foreach (var permission in permissions)
         {
-            var permissionId = await db.QueryFirstOrDefaultAsync<Guid?>(
-                "SELECT TOP 1 Id FROM Permissions WHERE Code = @Code AND IsDeleted = 0",
-                permission);
+            var permQuery = new Query("Permissions")
+                .Where("Code", permission.Code)
+                .Where("IsDeleted", 0)
+                .Select("Id");
+            var permissionId = await qf.FirstOrDefaultAsync<Guid?>(permQuery, null, null, default);
 
             if (!permissionId.HasValue)
             {
                 permissionId = Guid.NewGuid();
 
-                await db.ExecuteAsync(
-                    @"INSERT INTO Permissions (Id, Code, Description, Resource, Action, IsDeleted, CreatedAt, CreatedBy, UpdatedAt, UpdatedBy)
-                      VALUES (@Id, @Code, @Description, @Resource, @Action, 0, @Now, 'system', @Now, 'system')",
-                    new { Id = permissionId.Value, permission.Code, permission.Description, permission.Resource, permission.Action, Now = now });
+                var permInsertQuery = new Query("Permissions").AsInsert(new
+                {
+                    Id = permissionId.Value,
+                    Code = permission.Code,
+                    Description = permission.Description,
+                    Resource = permission.Resource,
+                    Action = permission.Action,
+                    IsDeleted = 0,
+                    CreatedAt = now,
+                    CreatedBy = "system",
+                    UpdatedAt = now,
+                    UpdatedBy = "system"
+                });
+                await qf.ExecuteAsync(permInsertQuery, null, null, default);
             }
 
-            await db.ExecuteAsync(
-                @"INSERT INTO RolePermissions (RoleId, PermissionId)
-                  SELECT @RoleId, @PermissionId
-                  WHERE NOT EXISTS (
-                      SELECT 1 FROM RolePermissions WHERE RoleId = @RoleId AND PermissionId = @PermissionId)",
-                new { RoleId = adminRoleId, PermissionId = permissionId });
+            var rpInsertQuery = new Query("RolePermissions").AsInsert(new
+            {
+                RoleId = adminRoleId,
+                PermissionId = permissionId
+            });
+            await qf.ExecuteAsync(rpInsertQuery, null, null, default);
         }
 
-        var hasSettings = await db.ExecuteScalarAsync<int>(
-            "SELECT COUNT(1) FROM Settings WHERE IsDeleted = 0");
+        var settingsCountQuery = new Query("Settings")
+            .Where("IsDeleted", 0)
+            .AsCount();
+        var hasSettings = await qf.FirstOrDefaultAsync<IDictionary<string, object?>>(settingsCountQuery, null, null, default) switch
+        {
+            { } d when d.Values.FirstOrDefault() is int i => i,
+            { } d when d.Values.FirstOrDefault() is long l => (int)l,
+            _ => 0
+        };
+
         if (hasSettings == 0)
         {
             var defaultSettings = new[]
             {
-                new { Id = Guid.NewGuid(), Key = "site.name", Value = "Admin Shell", Category = "general", Desc = (string?)"Application display name", Type = "string" },
-                new { Id = Guid.NewGuid(), Key = "site.description", Value = "Admin management panel", Category = "general", Desc = (string?)"Application description", Type = "string" },
-                new { Id = Guid.NewGuid(), Key = "site.registration", Value = "true", Category = "general", Desc = (string?)"Enable public registration", Type = "boolean" },
-                new { Id = Guid.NewGuid(), Key = "site.maintenance", Value = "false", Category = "general", Desc = (string?)"Maintenance mode", Type = "boolean" },
-                new { Id = Guid.NewGuid(), Key = "security.session.timeout", Value = "60", Category = "security", Desc = (string?)"Session timeout in minutes", Type = "number" },
-                new { Id = Guid.NewGuid(), Key = "security.password.policy", Value = "medium", Category = "security", Desc = (string?)"Password policy (low/medium/high)", Type = "string" },
-                new { Id = Guid.NewGuid(), Key = "security.2fa", Value = "false", Category = "security", Desc = (string?)"Require two-factor authentication", Type = "boolean" },
-                new { Id = Guid.NewGuid(), Key = "security.rate.limit", Value = "true", Category = "security", Desc = (string?)"Rate limit login attempts", Type = "boolean" },
-                new { Id = Guid.NewGuid(), Key = "notifications.admin.email", Value = "admin@example.com", Category = "notifications", Desc = (string?)"Admin notification email", Type = "string" },
-                new { Id = Guid.NewGuid(), Key = "notifications.email.on.register", Value = "true", Category = "notifications", Desc = (string?)"Email on new registration", Type = "boolean" },
-                new { Id = Guid.NewGuid(), Key = "notifications.email.on.plugin.error", Value = "true", Category = "notifications", Desc = (string?)"Email on plugin errors", Type = "boolean" },
-                new { Id = Guid.NewGuid(), Key = "notifications.email.on.health", Value = "true", Category = "notifications", Desc = (string?)"Email on health changes", Type = "boolean" },
-                new { Id = Guid.NewGuid(), Key = "plugins.directory", Value = "../plugins", Category = "plugins", Desc = (string?)"Plugin directory path", Type = "string" },
-                new { Id = Guid.NewGuid(), Key = "plugins.auto.discover", Value = "true", Category = "plugins", Desc = (string?)"Auto-discover new plugins", Type = "boolean" },
-                new { Id = Guid.NewGuid(), Key = "plugins.hot.reload", Value = "true", Category = "plugins", Desc = (string?)"Enable hot-reload", Type = "boolean" },
+                new { Id = Guid.NewGuid(), Key = "site.name", Value = "Admin Shell", Category = "general", Description = (string?)"Application display name", ValueType = "string" },
+                new { Id = Guid.NewGuid(), Key = "site.description", Value = "Admin management panel", Category = "general", Description = (string?)"Application description", ValueType = "string" },
+                new { Id = Guid.NewGuid(), Key = "site.registration", Value = "true", Category = "general", Description = (string?)"Enable public registration", ValueType = "boolean" },
+                new { Id = Guid.NewGuid(), Key = "site.maintenance", Value = "false", Category = "general", Description = (string?)"Maintenance mode", ValueType = "boolean" },
+                new { Id = Guid.NewGuid(), Key = "security.session.timeout", Value = "60", Category = "security", Description = (string?)"Session timeout in minutes", ValueType = "number" },
+                new { Id = Guid.NewGuid(), Key = "security.password.policy", Value = "medium", Category = "security", Description = (string?)"Password policy (low/medium/high)", ValueType = "string" },
+                new { Id = Guid.NewGuid(), Key = "security.2fa", Value = "false", Category = "security", Description = (string?)"Require two-factor authentication", ValueType = "boolean" },
+                new { Id = Guid.NewGuid(), Key = "security.rate.limit", Value = "true", Category = "security", Description = (string?)"Rate limit login attempts", ValueType = "boolean" },
+                new { Id = Guid.NewGuid(), Key = "notifications.admin.email", Value = "admin@example.com", Category = "notifications", Description = (string?)"Admin notification email", ValueType = "string" },
+                new { Id = Guid.NewGuid(), Key = "notifications.email.on.register", Value = "true", Category = "notifications", Description = (string?)"Email on new registration", ValueType = "boolean" },
+                new { Id = Guid.NewGuid(), Key = "notifications.email.on.plugin.error", Value = "true", Category = "notifications", Description = (string?)"Email on plugin errors", ValueType = "boolean" },
+                new { Id = Guid.NewGuid(), Key = "notifications.email.on.health", Value = "true", Category = "notifications", Description = (string?)"Email on health changes", ValueType = "boolean" },
+                new { Id = Guid.NewGuid(), Key = "plugins.directory", Value = "../plugins", Category = "plugins", Description = (string?)"Plugin directory path", ValueType = "string" },
+                new { Id = Guid.NewGuid(), Key = "plugins.auto.discover", Value = "true", Category = "plugins", Description = (string?)"Auto-discover new plugins", ValueType = "boolean" },
+                new { Id = Guid.NewGuid(), Key = "plugins.hot.reload", Value = "true", Category = "plugins", Description = (string?)"Enable hot-reload", ValueType = "boolean" },
             };
 
-            await db.ExecuteAsync(
-                @"INSERT INTO Settings (Id, [Key], Value, Category, Description, ValueType, IsDeleted, CreatedAt, CreatedBy)
-                  VALUES (@Id, @Key, @Value, @Category, @Desc, @Type, 0, @Now, 'system')",
-                defaultSettings.Select(s => new { s.Id, s.Key, s.Value, s.Category, s.Desc, s.Type, Now = now }).ToList());
+            var settingsInsertQuery = new Query("Settings").AsInsert(
+                defaultSettings.Select(s => new { s.Id, s.Key, s.Value, s.Category, s.Description, s.ValueType, IsDeleted = 0, CreatedAt = now, CreatedBy = "system" }).ToList());
+            await qf.ExecuteAsync(settingsInsertQuery, null, null, default);
 
             _logger.LogInformation("Default settings seeded");
         }

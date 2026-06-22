@@ -3,13 +3,9 @@ using AdminShell.Core.Entities;
 
 namespace AdminShell.Core.Interfaces;
 
-public interface IUserService
+public interface IUserService : IBaseService<UserDto, CreateUserRequest, UpdateUserRequest>
 {
     Task<PagedResult<UserDto>> GetAllAsync(int skip, int take, string? email, string? username, string? displayName, string? currentUser, CancellationToken ct = default);
-    Task<UserDto?> GetByIdAsync(Guid id, CancellationToken ct = default);
-    Task<Result<UserDto>> CreateAsync(CreateUserRequest request, string? currentUser, CancellationToken ct = default);
-    Task<Result<UserDto>> UpdateAsync(Guid id, UpdateUserRequest request, string? currentUser, CancellationToken ct = default);
-    Task<Result> DeleteAsync(Guid id, string? currentUser, CancellationToken ct = default);
 }
 
 public record CreateUserRequest(string Email, string Username, string Password, string? DisplayName, List<ExtensionField>? ExtensionFields = null);

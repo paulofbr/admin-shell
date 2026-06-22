@@ -5,7 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <RootNamespace>AdminShell.Host</RootNamespace>
-    <GenerateTypeScriptApiClient Condition="'$(GenerateTypeScriptApiClient)' == ''">true</GenerateTypeScriptApiClient>
+    <GenerateTypeScriptApiClient Condition="'$(GenerateTypeScriptApiClient)' == ''">false</GenerateTypeScriptApiClient>
   </PropertyGroup>
 
   <ItemGroup>

@@ -6,8 +6,10 @@ using AdminShell.Contracts;
 using AdminShell.Core.Entities;
 using AdminShell.Core.Interfaces;
 using AdminShell.Infrastructure.Data;
-using Dapper;
 using Microsoft.Extensions.Logging;
+using SqlKata;
+using SqlKata.Compilers;
+using SqlKata.Execution;
 using System.Data;
 
 namespace AdminShell.Infrastructure.PluginSystem;
@@ -79,8 +81,11 @@ public class SettingsRegistry : ISettingsRegistry
         using var db = _connectionFactory.CreateConnection();
         db.Open();
 
-        var existingKeys = (await db.QueryAsync<string>(
-            "SELECT [Key] FROM Settings WHERE IsDeleted = 0")).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var qf = new QueryFactory(db, new SqlServerCompiler());
+        var existingKeysQuery = new Query("Settings")
+            .Where("IsDeleted", 0)
+            .Select("Key");
+        var existingKeys = (await qf.GetAsync<string>(existingKeysQuery, null, null, ct)).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         var now = DateTime.UtcNow;
         foreach (var definition in GetAll())
@@ -89,20 +94,19 @@ public class SettingsRegistry : ISettingsRegistry
                 continue;
 
             var defaultValue = GetDefaultValue(definition) ?? string.Empty;
-            await db.ExecuteAsync(
-                @"INSERT INTO Settings (Id, [Key], Value, Category, Description, ValueType, IsDeleted, CreatedAt, CreatedBy)
-                  VALUES (@Id, @Key, @Value, @Category, @Description, @ValueType, 0, @CreatedAt, @CreatedBy)",
-                new
-                {
-                    Id = Guid.NewGuid(),
-                    definition.Key,
-                    Value = defaultValue,
-                    definition.Category,
-                    definition.Description,
-                    definition.ValueType,
-                    CreatedAt = now,
-                    CreatedBy = "system"
-                });
+            var insertQuery = new Query("Settings").AsInsert(new
+            {
+                Id = Guid.NewGuid(),
+                Key = definition.Key,
+                Value = defaultValue,
+                Category = definition.Category,
+                Description = definition.Description,
+                ValueType = definition.ValueType,
+                IsDeleted = 0,
+                CreatedAt = now,
+                CreatedBy = "system"
+            });
+            await qf.ExecuteAsync(insertQuery, null, null, ct);
 
             existingKeys.Add(definition.Key);
             _logger.LogInformation("Ensured setting {Key} for category {Category}", definition.Key, definition.Category);
@@ -118,8 +122,10 @@ public class SettingsRegistry : ISettingsRegistry
         using var db = _connectionFactory.CreateConnection();
         db.Open();
 
-        var settings = (await db.QueryAsync<AppSetting>(
-            "SELECT * FROM Settings WHERE IsDeleted = 0")).ToDictionary(s => s.Key, StringComparer.OrdinalIgnoreCase);
+        var qf = new QueryFactory(db, new SqlServerCompiler());
+        var settingsQuery = new Query("Settings")
+            .Where("IsDeleted", 0);
+        var settings = (await qf.GetAsync<AppSetting>(settingsQuery, null, null, ct)).ToDictionary(s => s.Key, StringComparer.OrdinalIgnoreCase);
 
         var dtos = definitions.Select(definition =>
         {
@@ -188,8 +194,11 @@ public class SettingsRegistry : ISettingsRegistry
         using var db = _connectionFactory.CreateConnection();
         db.Open();
 
-        var values = (await db.QueryAsync<SettingValueRow>(
-                "SELECT [Key], Value FROM Settings WHERE IsDeleted = 0"))
+        var qf = new QueryFactory(db, new SqlServerCompiler());
+        var valuesQuery = new Query("Settings")
+                .Where("IsDeleted", 0)
+                .Select("Key", "Value");
+        var values = (await qf.GetAsync<SettingValueRow>(valuesQuery, null, null, ct))
             .ToDictionary(row => row.Key, row => row.Value ?? string.Empty, StringComparer.OrdinalIgnoreCase);
 
         foreach (var definition in definitions)
@@ -304,51 +313,45 @@ public class SettingsRegistry : ISettingsRegistry
 
     private async Task UpsertSettingAsync(IDbConnection db, SettingDefinition definition, string? value)
     {
-        var existing = await db.QueryFirstOrDefaultAsync<AppSetting>(
-            "SELECT * FROM Settings WHERE [Key] = @Key AND IsDeleted = 0",
-            new { definition.Key });
+        var qf = new QueryFactory(db, new SqlServerCompiler());
+        var existingQuery = new Query("Settings")
+            .Where("Key", definition.Key)
+            .Where("IsDeleted", 0);
+        var existing = await qf.FirstOrDefaultAsync<AppSetting>(existingQuery, null, null, default);
 
         var now = DateTime.UtcNow;
         if (existing is not null)
         {
-            await db.ExecuteAsync(
-                @"UPDATE Settings
-                  SET Value = @Value,
-                      Category = @Category,
-                      Description = @Description,
-                      ValueType = @ValueType,
-                      UpdatedAt = @UpdatedAt,
-                      UpdatedBy = @UpdatedBy
-                  WHERE Id = @Id",
-                new
+            var updateQuery = new Query("Settings")
+                .Where("Id", existing.Id)
+                .AsUpdate(new
                 {
-                    existing.Id,
                     Value = value ?? string.Empty,
-                    definition.Category,
-                    definition.Description,
-                    definition.ValueType,
+                    Category = definition.Category,
+                    Description = definition.Description,
+                    ValueType = definition.ValueType,
                     UpdatedAt = now,
                     UpdatedBy = "system"
                 });
+            await qf.ExecuteAsync(updateQuery, null, null, default);
             return;
         }
 
-        await db.ExecuteAsync(
-            @"INSERT INTO Settings (Id, [Key], Value, Category, Description, ValueType, IsDeleted, CreatedAt, CreatedBy, UpdatedAt, UpdatedBy)
-              VALUES (@Id, @Key, @Value, @Category, @Description, @ValueType, 0, @CreatedAt, @CreatedBy, @UpdatedAt, @UpdatedBy)",
-            new
-            {
-                Id = Guid.NewGuid(),
-                definition.Key,
-                Value = value ?? string.Empty,
-                definition.Category,
-                definition.Description,
-                definition.ValueType,
-                CreatedAt = now,
-                CreatedBy = "system",
-                UpdatedAt = now,
-                UpdatedBy = "system"
-            });
+        var insertQuery = new Query("Settings").AsInsert(new
+        {
+            Id = Guid.NewGuid(),
+            Key = definition.Key,
+            Value = value ?? string.Empty,
+            Category = definition.Category,
+            Description = definition.Description,
+            ValueType = definition.ValueType,
+            IsDeleted = 0,
+            CreatedAt = now,
+            CreatedBy = "system",
+            UpdatedAt = now,
+            UpdatedBy = "system"
+        });
+        await qf.ExecuteAsync(insertQuery, null, null, default);
     }
 
     private static string? ConvertDefaultValueToString(object? value, SettingType type)

@@ -32,11 +32,11 @@ public abstract class BaseService<T, TDto, TCreate, TUpdate> : IBaseService<TDto
     
     public abstract Task<Result> DeleteAsync(Guid id, string? currentUser, CancellationToken ct = default);
 
-    protected async Task LogAsync(string action, string entityType, string entityId, string? user, string? details = null, CancellationToken ct = default)
+    protected async Task LogAsync(string action, string entityType, string entityId, string? user, string? details = null, string? previousValue = null, string? newValue = null, CancellationToken ct = default)
     {
         if (AuditLog != null)
         {
-            await AuditLog.LogAsync(action, entityType, entityId, user ?? "system", details: details, ct: ct);
+            await AuditLog.LogAsync(action, entityType, entityId, user ?? "system", previousValue: previousValue, newValue: newValue, details: details, ct: ct);
         }
     }
 }

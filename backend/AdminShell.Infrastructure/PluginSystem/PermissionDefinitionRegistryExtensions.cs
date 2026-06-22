@@ -1,5 +1,8 @@
 using AdminShell.Contracts;
 using Dapper;
+using SqlKata;
+using SqlKata.Compilers;
+using SqlKata.Execution;
 
 namespace AdminShell.Infrastructure.PluginSystem;
 
@@ -14,11 +17,12 @@ public static class PermissionDefinitionRegistryExtensions
         {
             ct.ThrowIfCancellationRequested();
 
-            var exists = await connection.ExecuteScalarAsync<int>(
-                @"SELECT COUNT(1)
-                  FROM Permissions
-                  WHERE Code = @Code AND IsDeleted = 0",
-                new { Code = definition.Code });
+            var qf = new QueryFactory(connection, new SqlServerCompiler());
+            var exists = await qf.Query("Permissions")
+                .Where("Code", definition.Code)
+                .Where("IsDeleted", 0)
+                .AsCount()
+                .FirstAsync<int>();
 
             if (exists > 0)
                 continue;
